@@ -11,7 +11,7 @@ using UnityEngine;
 using VRC;
 using VRC.Core;
 using VRC.UI;
-[assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "1.0.0", "loukylor")]
+[assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "1.1.0", "loukylor")]
 [assembly: MelonGame("VRChat", "VRChat")]
 
 namespace UserInfoExtensions
