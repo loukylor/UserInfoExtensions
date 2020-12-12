@@ -19,6 +19,7 @@ namespace UserInfoExtensions
     class UserInfoExtensionsMod : MelonMod
     {
         public static MenuController menuController;
+
         public override void OnApplicationStart()
         {
             UIExpansionKit.API.ICustomLayoutedMenu userDetailsMenu = UIExpansionKit.API.ExpansionKitApi.GetExpandedMenu(UIExpansionKit.API.ExpandedMenu.UserDetailsMenu);
@@ -26,6 +27,7 @@ namespace UserInfoExtensions
 
             userDetailsMenu.AddSimpleButton("Go to Quick Menu", QuickMenuFromSocial.ToQuickMenu);
             userDetailsMenu.AddSimpleButton("Avatar Author", AuthorFromSocialMenu.GetAvatarAuthor);
+            userDetailsMenu.AddSimpleButton("Bio", BioButton.GetBio);
 
             MelonLogger.Log("Initialized!");
         }
@@ -37,7 +39,7 @@ namespace UserInfoExtensions
         }
     }
 
-    class QuickMenuFromSocial
+    public class QuickMenuFromSocial
     {
         public static void ToQuickMenu()
         {
@@ -54,7 +56,7 @@ namespace UserInfoExtensions
                     return;
                 }
             }
-            VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_2("Notice:", "You cannot show this user on the Quick Menu because they are not in the same instance", "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_1(); }));
+            VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_1("Notice:", "You cannot show this user on the Quick Menu because they are not in the same instance", "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_1(); }));
         }
     }
 
@@ -82,7 +84,7 @@ namespace UserInfoExtensions
             {
                 if (user.id == UserInfoExtensionsMod.menuController.activeUser.id)
                 {
-                    VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_2("Notice:", "You are already viewing the avatar author", "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_1(); }));
+                    VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_1("Notice:", "You are already viewing the avatar author", "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_1(); }));
                     return;
                 }
                 GameObject gameObject = GameObject.Find("UserInterface/MenuContent/Screens/UserInfo");
@@ -95,7 +97,7 @@ namespace UserInfoExtensions
 
             if (!canGet)
             {
-                VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_2("Slow down", "Please wait a little in between button presses", "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_1(); }));
+                VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_1("Slow down", "Please wait a little in between button presses", "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_1(); }));
                 return;
             }
             MelonCoroutines.Start(StartTimer());
@@ -109,7 +111,7 @@ namespace UserInfoExtensions
             }
             catch (WebException)
             {
-                VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_2("Error!", "Something went wrong and the author could not be retreived. Please try again", "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_1(); }));
+                VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_1("Error!", "Something went wrong and the author could not be retreived. Please try again", "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_1(); }));
                 return;
             }
 
@@ -143,6 +145,20 @@ namespace UserInfoExtensions
         {
             [JsonProperty("ownerId")]
             public string ownerId;
+        }
+    }
+    public class BioButton
+    {
+        public static void GetBio()
+        {
+            if (UserInfoExtensionsMod.menuController.activeUser.bio.Length >= 100)
+            {
+                VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_2("Bio:", UserInfoExtensionsMod.menuController.activeUser.bio, "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_1(); }));
+            }
+            else
+            {
+                VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_1("Bio:", UserInfoExtensionsMod.menuController.activeUser.bio, "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_1(); }));
+            }
         }
     }
 }
