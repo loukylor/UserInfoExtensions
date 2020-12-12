@@ -11,7 +11,7 @@ using UnityEngine;
 using VRC;
 using VRC.Core;
 using VRC.UI;
-[assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "1.0.0", "loukylor (https://github.com/loukylor/UserInfoExtension)")]
+[assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "1.0.0", "loukylor")]
 [assembly: MelonGame("VRChat", "VRChat")]
 
 namespace UserInfoExtensions
@@ -48,13 +48,13 @@ namespace UserInfoExtensions
                 if (player.field_Private_APIUser_0 == null) continue;
                 if (player.field_Private_APIUser_0.id == user.id)
                 {
-                    VRCUiManager.prop_VRCUiManager_0.Method_Public_Void_Boolean_0(); //Closes Big Menu
+                    VRCUiManager.prop_VRCUiManager_0.Method_Public_Void_Boolean_2(); //Closes Big Menu
                     QuickMenu.prop_QuickMenu_0.Method_Public_Void_Boolean_0(true); //Opens Quick Menu
                     QuickMenu.prop_QuickMenu_0.Method_Public_Void_Player_0(PlayerManager.Method_Public_Static_Player_String_0(user.id)); //Does the rest lmao
                     return;
                 }
             }
-            VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_1("Notice:", "You cannot show this user on the Quick Menu because they are not in the same instance", "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_3(); }));
+            VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_2("Notice:", "You cannot show this user on the Quick Menu because they are not in the same instance", "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_1(); }));
         }
     }
 
@@ -82,7 +82,7 @@ namespace UserInfoExtensions
             {
                 if (user.id == UserInfoExtensionsMod.menuController.activeUser.id)
                 {
-                    VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_1("Notice:", "You are already viewing the avatar author", "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_3(); }));
+                    VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_2("Notice:", "You are already viewing the avatar author", "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_1(); }));
                     return;
                 }
                 GameObject gameObject = GameObject.Find("UserInterface/MenuContent/Screens/UserInfo");
@@ -95,7 +95,7 @@ namespace UserInfoExtensions
 
             if (!canGet)
             {
-                VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_1("Slow down", "Please wait a little in between button presses", "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_3(); }));
+                VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_2("Slow down", "Please wait a little in between button presses", "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_1(); }));
                 return;
             }
             MelonCoroutines.Start(StartTimer());
@@ -109,7 +109,7 @@ namespace UserInfoExtensions
             }
             catch (WebException)
             {
-                VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_1("Error!", "Something went wrong and the author could not be retreived. Please try again", "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_3(); }));
+                VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_2("Error!", "Something went wrong and the author could not be retreived. Please try again", "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_1(); }));
                 return;
             }
 
