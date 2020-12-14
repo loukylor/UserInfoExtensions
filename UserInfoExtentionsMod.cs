@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using Harmony;
@@ -11,7 +12,7 @@ using UnityEngine;
 using VRC;
 using VRC.Core;
 using VRC.UI;
-[assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "1.1.0", "loukylor")]
+[assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "1.1.1", "loukylor (https://github.com/loukylor/UserInfoExtensions)")]
 [assembly: MelonGame("VRChat", "VRChat")]
 
 namespace UserInfoExtensions
@@ -19,6 +20,9 @@ namespace UserInfoExtensions
     class UserInfoExtensionsMod : MelonMod
     {
         public static MenuController menuController;
+        public static MethodBase popupV2;
+        public static MethodBase popupV1;
+        public static MethodBase closePopup;
 
         public override void OnApplicationStart()
         {
@@ -29,7 +33,41 @@ namespace UserInfoExtensions
             userDetailsMenu.AddSimpleButton("Avatar Author", AuthorFromSocialMenu.GetAvatarAuthor);
             userDetailsMenu.AddSimpleButton("Bio", BioButton.GetBio);
 
+            popupV2 = typeof(VRCUiPopupManager).GetMethods()
+                .Where(mb => mb.Name.StartsWith("Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_") && !mb.Name.Contains("PDM") && CheckMethod(mb, "UserInterface/MenuContent/Popups/StandardPopupV2")).First();
+            popupV1 = typeof(VRCUiPopupManager).GetMethods()
+                .Where(mb => mb.Name.StartsWith("Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_") && !mb.Name.Contains("PDM") && CheckMethod(mb, "UserInterface/MenuContent/Popups/StandardPopup")).First();
+            closePopup = typeof(VRCUiPopupManager).GetMethods()
+                .Where(mb => mb.Name.StartsWith("Method_Public_Void_") && mb.Name.Length <= 21 && !mb.Name.Contains("PDM") && CheckMethod(mb, "POPUP")).First();
+
+            QuickMenuFromSocial.Init();
+
             MelonLogger.Log("Initialized!");
+        }
+        public static void OpenPopupV2(string title, string text, string buttonText, Action onButtonClick) => popupV2.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, new object[5] { title, text, buttonText, (Il2CppSystem.Action) onButtonClick, null });
+        public static void OpenPopupV1(string title, string text, string buttonText, Action onButtonClick) => popupV1.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, new object[5] { title, text, buttonText, (Il2CppSystem.Action) onButtonClick, null });
+
+        //This method is practically stolen from https://github.com/BenjaminZehowlt/DynamicBonesSafety/blob/master/DynamicBonesSafetyMod.cs
+        public static bool CheckMethod(MethodBase methodBase, string match)
+        {
+            try
+            {
+                return UnhollowerRuntimeLib.XrefScans.XrefScanner.XrefScan(methodBase)
+                    .Where(instance => instance.Type == UnhollowerRuntimeLib.XrefScans.XrefType.Global && instance.ReadAsObject().ToString().Contains(match)).Any();
+            }
+            catch { }
+            return false;
+        }
+        public static bool CheckUsed(MethodBase methodBase, string methodName)
+        {
+            try
+            {
+                return UnhollowerRuntimeLib.XrefScans.XrefScanner.UsedBy(methodBase)
+                    .Where(instance => instance.TryResolve() == null ? false : instance.TryResolve().Name.Contains(methodName)).Any();
+            }
+            catch { }
+            return false;
+
         }
 
         public static void OnUserInfoOpen(MenuController __instance)
@@ -41,6 +79,16 @@ namespace UserInfoExtensions
 
     public class QuickMenuFromSocial
     {
+        public static MethodBase closeMenu;
+        public static MethodBase openQuickMenu;
+
+        public static void Init()
+        {
+            closeMenu = typeof(VRCUiManager).GetMethods()
+                            .Where(mb => mb.Name.StartsWith("Method_Public_Void_Boolean_") && mb.Name.Length <= 29 && UserInfoExtensionsMod.CheckUsed(mb, "Method_Public_Void_Vector3_Quaternion_SpawnOrientation_Boolean_Boolean_")).First();
+            openQuickMenu = typeof(QuickMenu).GetMethods()
+                                .Where(mb => mb.Name.StartsWith("Method_Public_Void_Boolean_") && mb.Name.Length <= 29 && !mb.Name.Contains("PDM")).First();
+        }
         public static void ToQuickMenu()
         {
             APIUser user = UserInfoExtensionsMod.menuController.activeUser;
@@ -50,13 +98,13 @@ namespace UserInfoExtensions
                 if (player.field_Private_APIUser_0 == null) continue;
                 if (player.field_Private_APIUser_0.id == user.id)
                 {
-                    VRCUiManager.prop_VRCUiManager_0.Method_Public_Void_Boolean_2(); //Closes Big Menu
-                    QuickMenu.prop_QuickMenu_0.Method_Public_Void_Boolean_0(true); //Opens Quick Menu
+                    closeMenu.Invoke(VRCUiManager.prop_VRCUiManager_0, new object[] { false }); //Closes Big Menu
+                    openQuickMenu.Invoke(QuickMenu.prop_QuickMenu_0, new object[] { true }); //Opens Quick Menu
                     QuickMenu.prop_QuickMenu_0.Method_Public_Void_Player_0(PlayerManager.Method_Public_Static_Player_String_0(user.id)); //Does the rest lmao
                     return;
                 }
             }
-            VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_1("Notice:", "You cannot show this user on the Quick Menu because they are not in the same instance", "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_1(); }));
+            UserInfoExtensionsMod.OpenPopupV2("Notice:", "You cannot show this user on the Quick Menu because they are not in the same instance", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
         }
     }
 
@@ -84,7 +132,7 @@ namespace UserInfoExtensions
             {
                 if (user.id == UserInfoExtensionsMod.menuController.activeUser.id)
                 {
-                    VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_1("Notice:", "You are already viewing the avatar author", "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_1(); }));
+                    UserInfoExtensionsMod.OpenPopupV2("Notice:", "You are already viewing the avatar author", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
                     return;
                 }
                 GameObject gameObject = GameObject.Find("UserInterface/MenuContent/Screens/UserInfo");
@@ -97,7 +145,7 @@ namespace UserInfoExtensions
 
             if (!canGet)
             {
-                VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_1("Slow down", "Please wait a little in between button presses", "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_1(); }));
+                UserInfoExtensionsMod.OpenPopupV2("Slow down!", "Please wait a little in between button presses", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
                 return;
             }
             MelonCoroutines.Start(StartTimer());
@@ -111,7 +159,7 @@ namespace UserInfoExtensions
             }
             catch (WebException)
             {
-                VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_1("Error!", "Something went wrong and the author could not be retreived. Please try again", "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_1(); }));
+                UserInfoExtensionsMod.OpenPopupV2("Error!", "Something went wrong and the author could not be retreived. Please try again", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
                 return;
             }
 
@@ -153,11 +201,11 @@ namespace UserInfoExtensions
         {
             if (UserInfoExtensionsMod.menuController.activeUser.bio.Length >= 100)
             {
-                VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_2("Bio:", UserInfoExtensionsMod.menuController.activeUser.bio, "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_1(); }));
+                UserInfoExtensionsMod.OpenPopupV1("Bio:", UserInfoExtensionsMod.menuController.activeUser.bio, "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
             }
             else
             {
-                VRCUiPopupManager.prop_VRCUiPopupManager_0.Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_1("Bio:", UserInfoExtensionsMod.menuController.activeUser.bio, "Close", new Action(() => { VRCUiManager.prop_VRCUiManager_0.prop_VRCUiPopupManager_0.Method_Public_Void_1(); }));
+                UserInfoExtensionsMod.OpenPopupV2("Bio:", UserInfoExtensionsMod.menuController.activeUser.bio, "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
             }
         }
     }
