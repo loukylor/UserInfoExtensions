@@ -471,13 +471,12 @@ namespace UserInfoExtensions
         public static void Init()
         {
             if (UserInfoExtensionsSettings.OpenUserInBrowserButton) UserInfoExtensionsMod.userDetailsMenu.AddSimpleButton("Open User in Browser", OpenUserInBrowser);
-            if (UserInfoExtensionsSettings.OpenAvatarInBrowserButton) UserInfoExtensionsMod.userDetailsMenu.AddSimpleButton("Open Avatar in Browser", OpenAvatarInBrowser);
 
-            UserInfoExtensionsMod.menu.AddSpacer();
             UserInfoExtensionsMod.menu.AddLabel("Website Related Things");
             UserInfoExtensionsMod.menu.AddSpacer();
+            UserInfoExtensionsMod.menu.AddSpacer();
             UserInfoExtensionsMod.menu.AddSimpleButton("Open User in Browser", OpenUserInBrowser);
-            UserInfoExtensionsMod.menu.AddSimpleButton("Open Avatar in Browser", OpenAvatarInBrowser);
+            UserInfoExtensionsMod.menu.AddSpacer();
             UserInfoExtensionsMod.menu.AddSpacer();
         }
 
@@ -487,20 +486,6 @@ namespace UserInfoExtensions
 
             System.Diagnostics.Process.Start("https://vrchat.com/home/user/" + UserInfoExtensionsMod.menuController.activeUserId);
             UserInfoExtensionsMod.OpenPopupV2("Notice:", "User has been opened in the default browser", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
-        }
-        public static void OpenAvatarInBrowser()
-        {
-            UserInfoExtensionsMod.HideAll();
-
-            if (UserInfoExtensionsMod.menuController.activeAvatarId == null || UserInfoExtensionsMod.menuController.activeAvatarId == "")
-            {
-                UserInfoExtensionsMod.OpenPopupV2("Notice:", "You cannot open this avatar in the website because they are not in the same instance", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
-            }
-            else
-            {
-                System.Diagnostics.Process.Start("https://vrchat.com/home/avatar/" + UserInfoExtensionsMod.menuController.activeAvatarId);
-                UserInfoExtensionsMod.OpenPopupV2("Notice:", "Avatar has been opened in the default browser", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
-            }
         }
     }
 }

@@ -13,7 +13,6 @@ namespace UserInfoExtensions
         public static bool BioLinksButton;
         public static bool BioLanguagesButton;
         public static bool OpenUserInBrowserButton;
-        public static bool OpenAvatarInBrowserButton;
 
         public static void RegisterSettings()
         {
@@ -25,7 +24,6 @@ namespace UserInfoExtensions
             MelonPrefs.RegisterBool(catagory, nameof(BioLinksButton), false, "Show \"Bio Links\" button");
             MelonPrefs.RegisterBool(catagory, nameof(BioLanguagesButton), false, "Show \"Bio Languages\" button");
             MelonPrefs.RegisterBool(catagory, nameof(OpenUserInBrowserButton), false, "Show \"Open User in Browser\" button");
-            MelonPrefs.RegisterBool(catagory, nameof(OpenAvatarInBrowserButton), false, "Show \"Open Avatar in Browser\" button");
 
             OnModSettingsApplied();
         }
