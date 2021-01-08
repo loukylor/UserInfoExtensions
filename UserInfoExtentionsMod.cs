@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net;
 using System.Reflection;
+using BestHTTP;
 using Harmony;
 using MelonLoader;
 using Newtonsoft.Json;
@@ -156,7 +155,7 @@ namespace UserInfoExtensions
 
     public class AuthorFromSocialMenu
     {
-        public static Uri avatarLink;
+        public static Il2CppSystem.Uri avatarLink;
         public static bool canGet = true;
 
         public static void Init()
@@ -167,7 +166,7 @@ namespace UserInfoExtensions
         }
         public static void OnUserInfoOpen()
         {
-            avatarLink = new Uri(UserInfoExtensionsMod.menuController.activeUser.currentAvatarImageUrl);
+            avatarLink = new Il2CppSystem.Uri(UserInfoExtensionsMod.menuController.activeUser.currentAvatarImageUrl);
 
             string adjustedLink = string.Format("https://{0}", avatarLink.Authority);
 
@@ -176,7 +175,7 @@ namespace UserInfoExtensions
                 adjustedLink += avatarLink.Segments[i];
             }
 
-            avatarLink = new Uri(adjustedLink.Trim("/".ToCharArray()));
+            avatarLink = new Il2CppSystem.Uri(adjustedLink.Trim("/".ToCharArray()));
         }
 
         public static void GetAvatarAuthor()
@@ -191,30 +190,34 @@ namespace UserInfoExtensions
 
             MelonCoroutines.Start(StartTimer());
 
-            WebRequest request = WebRequest.Create(avatarLink);
+            HTTPRequest request = new HTTPRequest(avatarLink, new Action<HTTPRequest, HTTPResponse>((HTTPRequest rq, HTTPResponse resp) => OnAvatarInfoReceived(resp)));
 
             try
             {
-                request.BeginGetResponse(new AsyncCallback(OnAvatarInfoReceived), request);
+                request.Send();
             }
             catch (Exception)
             {
                 UserInfoExtensionsMod.OpenPopupV2("Error!", "Something went wrong and the author could not be retreived. Please try again", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
                 return;
             }
+            finally
+            {
+                request.Dispose();
+            }
         }
-        private static void OnAvatarInfoReceived(IAsyncResult result)
+        private static void OnAvatarInfoReceived(HTTPResponse response)
         {
-            WebResponse response = (result.AsyncState as HttpWebRequest).EndGetResponse(result) as HttpWebResponse;
+            /*WebResponse response = (result.AsyncState as HttpWebRequest).EndGetResponse(result) as HttpWebResponse;
 
             using (StreamReader streamReader = new StreamReader(response.GetResponseStream()))
-            {
-                JObject jsonData = (JObject)JsonSerializer.CreateDefault().Deserialize(streamReader, typeof(JObject));
-
+            {*/
+                //JObject jsonData = (JObject) JsonSerializer.CreateDefault().Deserialize(streamReader, typeof(JObject));
+                JObject jsonData = JObject.Parse(response.DataAsText);
                 JsonData requestedData = jsonData.ToObject<JsonData>();
                 APIUser.FetchUser(requestedData.ownerId, new Action<APIUser>(OnUserFetched), new Action<string>((thing) => { }));
-            }
-            response.Close();
+            //}
+            //response.Close();
         }
         private static void OnUserFetched(APIUser user)
         {

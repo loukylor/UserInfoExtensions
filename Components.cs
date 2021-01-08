@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections;
+using BestHTTP;
 using MelonLoader;
 using UnhollowerBaseLib.Attributes;
 using UnityEngine;
-using UnityEngine.Networking;
 using UserInfoExtensions;
 
 namespace UserInfoExtentions
@@ -44,12 +44,10 @@ namespace UserInfoExtentions
         {
             Uri link = new Uri(UserInfoExtensionsMod.menuController.activeUser.bioLinks[index]);
             linkTexts[index].text = link.Host;
-            UnityWebRequest iconRequest = UnityWebRequestTexture.GetTexture($"http://www.google.com/s2/favicons?domain_url={link.Host}&sz=128");
+            HTTPRequest iconRequest = new HTTPRequest(new Il2CppSystem.Uri($"http://www.google.com/s2/favicons?domain_url={link.Host}&sz=128"), new Action<HTTPRequest, HTTPResponse>((HTTPRequest rq, HTTPResponse resp) => OnTextureLoaded(resp, index)));
             try
             {
-                UnityWebRequestAsyncOperation asyncOperation = iconRequest.SendWebRequest();
-                while (!asyncOperation.isDone) yield return null;
-                icons[index].texture = DownloadHandlerTexture.GetContent(iconRequest);
+                iconRequest.Send();
             }
             finally
             {
@@ -57,6 +55,8 @@ namespace UserInfoExtentions
             }
             yield break;
         }
+        [method: HideFromIl2Cpp]
+        public void OnTextureLoaded(HTTPResponse response, int index) => icons[index].texture = response.DataAsTexture2D;
 
         public void OnOpenLink()
         {
