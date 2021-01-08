@@ -9,6 +9,7 @@ New features:
  - Adds a button show you the languages a the selected user has in their bio
  - Adds a button opens the a the selected user in the default browser
  - Adds a button opens the a the selected user's avatar in the default browser
+ 
  (These buttons can also be turned on and off and can always be accessed in a popup attached to the User Details Page)
 
 Note: This needs UIExpansionKit (https://github.com/knah/VRCMods/tree/master/UIExpansionKit)
