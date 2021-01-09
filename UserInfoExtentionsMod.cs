@@ -13,7 +13,7 @@ using UnityEngine;
 using VRC;
 using VRC.Core;
 using VRC.UI;
-[assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "2.0.1", "loukylor", "https://github.com/loukylor/UserInfoExtensions")]
+[assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "2.0.2", "loukylor", "https://github.com/loukylor/UserInfoExtensions")]
 [assembly: MelonGame("VRChat", "VRChat")]
 
 namespace UserInfoExtensions
@@ -36,7 +36,7 @@ namespace UserInfoExtensions
             popupV2 = typeof(VRCUiPopupManager).GetMethods()
                 .Where(mb => mb.Name.StartsWith("Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_") && !mb.Name.Contains("PDM") && CheckMethod(mb, "UserInterface/MenuContent/Popups/StandardPopupV2")).First();
             popupV1 = typeof(VRCUiPopupManager).GetMethods()
-                .Where(mb => mb.Name.StartsWith("Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_") && !mb.Name.Contains("PDM") && CheckMethod(mb, "UserInterface/MenuContent/Popups/StandardPopup")).First();
+                .Where(mb => mb.Name.StartsWith("Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_") && !mb.Name.Contains("PDM") && CheckMethod(mb, "UserInterface/MenuContent/Popups/StandardPopup") && !CheckMethod(mb, "UserInterface/MenuContent/Popups/StandardPopupV2")).First();
             closePopup = typeof(VRCUiPopupManager).GetMethods()
                 .Where(mb => mb.Name.StartsWith("Method_Public_Void_") && mb.Name.Length <= 21 && !mb.Name.Contains("PDM") && CheckMethod(mb, "POPUP")).First();
             userDetailsMenu = UIExpansionKit.API.ExpansionKitApi.GetExpandedMenu(UIExpansionKit.API.ExpandedMenu.UserDetailsMenu);
@@ -208,16 +208,9 @@ namespace UserInfoExtensions
         }
         private static void OnAvatarInfoReceived(HTTPResponse response)
         {
-            /*WebResponse response = (result.AsyncState as HttpWebRequest).EndGetResponse(result) as HttpWebResponse;
-
-            using (StreamReader streamReader = new StreamReader(response.GetResponseStream()))
-            {*/
-                //JObject jsonData = (JObject) JsonSerializer.CreateDefault().Deserialize(streamReader, typeof(JObject));
-                JObject jsonData = JObject.Parse(response.DataAsText);
-                JsonData requestedData = jsonData.ToObject<JsonData>();
-                APIUser.FetchUser(requestedData.ownerId, new Action<APIUser>(OnUserFetched), new Action<string>((thing) => { }));
-            //}
-            //response.Close();
+            JObject jsonData = JObject.Parse(response.DataAsText);
+            JsonData requestedData = jsonData.ToObject<JsonData>();
+            APIUser.FetchUser(requestedData.ownerId, new Action<APIUser>(OnUserFetched), new Action<string>((thing) => { }));
         }
         private static void OnUserFetched(APIUser user)
         {
@@ -256,6 +249,7 @@ namespace UserInfoExtensions
     {
         public static UserInfoExtentions.BioLinksPopup bioLinksPopup;
         public static UserInfoExtentions.BioLanguagesPopup bioLanguagesPopup;
+        public static List<Uri> bioLinks = new List<Uri>();
         public static List<string> userLanguages = new List<string>();
         public readonly static Dictionary<string, string> languageLookup = new Dictionary<string, string>
         {
@@ -315,6 +309,8 @@ namespace UserInfoExtensions
 
             bioLinksPopup = popupGameObject.AddComponent<UserInfoExtentions.BioLinksPopup>();
 
+            bioLinksPopup.screenType = "LINKS_POPUP"; //Required to make popup work
+
             bioLinksPopup.closePopupButton = popupGameObject.transform.Find("Popup/ExitButton").GetComponent<UnityEngine.UI.Button>();
             bioLinksPopup.closePopupButton.onClick.AddListener((UnityEngine.Events.UnityAction) (() => bioLinksPopup.Close()));
 
@@ -353,7 +349,8 @@ namespace UserInfoExtensions
                     else
                     {
                         toggle.transform.FindChild("Description").GetComponent<UnityEngine.UI.Text>().color = Color.white;
-                        bioLinksPopup.currentLink = toggle.transform.FindChild("Description").GetComponent<UnityEngine.UI.Text>().text;
+                        
+                        bioLinksPopup.currentLink = bioLinks[toggle.transform.GetSiblingIndex()];
                     }
                 }));
 
@@ -363,8 +360,6 @@ namespace UserInfoExtensions
 
                 toggle.transform.gameObject.name = $"BioLink{i + 1}";
             }
-
-            bioLinksPopup.screenType = "LINKS_POPUP"; //Required to make popup work
 
             bioLinksPopup.gameObject.name = "BioLinksPopup";
 
@@ -378,6 +373,8 @@ namespace UserInfoExtensions
             foreach (I2.Loc.Localize component in popupGameObject.GetComponentsInChildren<I2.Loc.Localize>()) UnityEngine.Object.Destroy(component);
 
             bioLanguagesPopup = popupGameObject.AddComponent<UserInfoExtentions.BioLanguagesPopup>();
+
+            bioLanguagesPopup.screenType = "LANGUAGES_POPUP"; //Required to make popup work
 
             bioLanguagesPopup.closePopupButton = popupGameObject.transform.Find("Popup/ExitButton").GetComponent<UnityEngine.UI.Button>();
             bioLanguagesPopup.closePopupButton.onClick.AddListener((UnityEngine.Events.UnityAction)(() => bioLanguagesPopup.Close()));
@@ -410,8 +407,6 @@ namespace UserInfoExtensions
                 statusSettings.GetChild(i).transform.gameObject.name = $"BioLanguage{i + 1}";
             }
 
-            bioLanguagesPopup.screenType = "LANGUAGES_POPUP"; //Required to make popup work
-
             bioLanguagesPopup.gameObject.name = "BioLanguagesPopup";
         }
         public static void OnUserInfoOpen()
@@ -440,6 +435,7 @@ namespace UserInfoExtensions
         {
             UserInfoExtensionsMod.HideAll();
 
+            CheckLinks(UserInfoExtensionsMod.menuController.activeUser.bioLinks);
             if (UserInfoExtensionsMod.menuController.activeUser.bioLinks == null)
             {
                 UserInfoExtensionsMod.OpenPopupV2("Notice:", "Cannot get users links", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
@@ -448,12 +444,33 @@ namespace UserInfoExtensions
             {
                 UserInfoExtensionsMod.OpenPopupV2("Notice:", "This user has no bio links", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
             }
-
+            else if (bioLinks.Count == 0)
+            {
+                UserInfoExtensionsMod.OpenPopupV2("Notice:", "This user has invalid links", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
+            }
             else
             {
                 VRCUiManager.prop_VRCUiManager_0.ShowScreenButton("UserInterface/MenuContent/Popups/BioLinksPopup");
             }
         }
+        public static void CheckLinks(Il2CppSystem.Collections.Generic.List<string> checkLinks)
+        {
+            bioLinks = new List<Uri>();
+            foreach (string link in checkLinks)
+            {
+                Uri checkedLink;
+                try
+                {
+                    checkedLink = new Uri(link);
+                }
+                catch
+                {
+                    continue;
+                }
+                bioLinks.Add(checkedLink);
+            }
+        }
+
         public static void ShowBioLanguagesPopup()
         {
             UserInfoExtensionsMod.HideAll();

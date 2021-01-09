@@ -16,7 +16,7 @@ namespace UserInfoExtentions
         public UnityEngine.UI.Text[] linkTexts;
         public UnityEngine.UI.RawImage[] icons;
         public GameObject[] linkStates;
-        public string currentLink;
+        public Uri currentLink;
 
         public new void OnEnable()
         {
@@ -24,7 +24,7 @@ namespace UserInfoExtentions
             for (int i = 0; i < linkStates.Length; i++)
             {
                 linkStates[i].SetActive(true);
-                if (i < UserInfoExtensionsMod.menuController.activeUser.bioLinks.Count)
+                if (i < BioButtons.bioLinks.Count)
                 {
                     MelonCoroutines.Start(DownloadTexture(i));
                 }
@@ -36,15 +36,15 @@ namespace UserInfoExtentions
         }
         public new void OnDisable()
         {
+            base.OnDisable();
             foreach (GameObject linkstate in linkStates) linkstate.GetComponent<UnityEngine.UI.Toggle>().isOn = false;
         }
 
         [method: HideFromIl2Cpp]
         public IEnumerator DownloadTexture(int index)
         {
-            Uri link = new Uri(UserInfoExtensionsMod.menuController.activeUser.bioLinks[index]);
-            linkTexts[index].text = link.Host;
-            HTTPRequest iconRequest = new HTTPRequest(new Il2CppSystem.Uri($"http://www.google.com/s2/favicons?domain_url={link.Host}&sz=128"), new Action<HTTPRequest, HTTPResponse>((HTTPRequest rq, HTTPResponse resp) => OnTextureLoaded(resp, index)));
+            linkTexts[index].text = BioButtons.bioLinks[index].OriginalString.Length >= 43 ? BioButtons.bioLinks[index].OriginalString.Substring(0, 43) : BioButtons.bioLinks[index].OriginalString;
+            HTTPRequest iconRequest = new HTTPRequest(new Il2CppSystem.Uri($"http://www.google.com/s2/favicons?domain_url={BioButtons.bioLinks[index].Host}&sz=128"), new Action<HTTPRequest, HTTPResponse>((HTTPRequest rq, HTTPResponse resp) => OnTextureLoaded(resp, index)));
             try
             {
                 iconRequest.Send();
@@ -60,11 +60,12 @@ namespace UserInfoExtentions
 
         public void OnOpenLink()
         {
-            if (currentLink != "")
+            if (currentLink != null)
             {
-                System.Diagnostics.Process.Start(currentLink);
+                System.Diagnostics.Process.Start(currentLink.OriginalString);
                 Close();
                 UserInfoExtensionsMod.OpenPopupV2("Notice:", "Link has been opened in the default browser", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
+                currentLink = null;
             }
         }
 
