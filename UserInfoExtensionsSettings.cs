@@ -3,12 +3,13 @@ using System.Reflection;
 
 namespace UserInfoExtensions
 {
-    class UserInfoExtensionsSettings
+    public class UserInfoExtensionsSettings
     {
         private const string catagory = "UserInfoExtensionsSettings";
 
         public static bool QuickMenuFromSocialButton;
         public static bool AuthorFromSocialMenuButton;
+        public static bool AuthorFromAvatarMenuButton;
         public static bool BioButton;
         public static bool BioLinksButton;
         public static bool BioLanguagesButton;
@@ -19,7 +20,8 @@ namespace UserInfoExtensions
             MelonPrefs.RegisterCategory(catagory, "UserInfoExtensions Settings");
 
             MelonPrefs.RegisterBool(catagory, nameof(QuickMenuFromSocialButton), false, "Show \"To Quick Menu\" button");
-            MelonPrefs.RegisterBool(catagory, nameof(AuthorFromSocialMenuButton), false, "Show \"Avatar Author\" button");
+            MelonPrefs.RegisterBool(catagory, nameof(AuthorFromSocialMenuButton), false, "Show \"Avatar Author\" button in Social Menu");
+            MelonPrefs.RegisterBool(catagory, nameof(AuthorFromAvatarMenuButton), true, "Show \"Avatar Author\" button in Avatar Menu");
             MelonPrefs.RegisterBool(catagory, nameof(BioButton), false, "Show \"Bio\" button");
             MelonPrefs.RegisterBool(catagory, nameof(BioLinksButton), false, "Show \"Bio Links\" button");
             MelonPrefs.RegisterBool(catagory, nameof(BioLanguagesButton), false, "Show \"Bio Languages\" button");

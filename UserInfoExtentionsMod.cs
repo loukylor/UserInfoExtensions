@@ -10,36 +10,28 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnhollowerRuntimeLib;
 using UnityEngine;
+using UserInfoExtentions;
 using VRC;
 using VRC.Core;
 using VRC.UI;
-[assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "2.0.2", "loukylor", "https://github.com/loukylor/UserInfoExtensions")]
+[assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "2.1.0", "loukylor", "https://github.com/loukylor/UserInfoExtensions")]
 [assembly: MelonGame("VRChat", "VRChat")]
 
 namespace UserInfoExtensions
 {
-    class UserInfoExtensionsMod : MelonMod
+    public class UserInfoExtensionsMod : MelonMod
     {
-        public static MenuController menuController;
-        public static MethodBase popupV2;
-        public static MethodBase popupV1;
-        public static MethodBase closePopup;
-
         public static UIExpansionKit.API.ICustomLayoutedMenu userDetailsMenu;
         public static UIExpansionKit.API.ICustomShowableLayoutedMenu menu;
 
         public override void OnApplicationStart()
         {
+            UserInfoExtensionsSettings.RegisterSettings();
+
+            Utilities.Init();
+
             harmonyInstance.Patch(AccessTools.Method(typeof(MenuController), "Method_Public_Void_APIUser_0"), postfix: new HarmonyMethod(typeof(UserInfoExtensionsMod).GetMethod("OnUserInfoOpen", BindingFlags.Static | BindingFlags.Public)));
             harmonyInstance.Patch(AccessTools.Method(typeof(PageUserInfo), "Back"), postfix: new HarmonyMethod(typeof(UserInfoExtensionsMod).GetMethod("OnUserInfoClose", BindingFlags.Static | BindingFlags.Public)));
-
-            popupV2 = typeof(VRCUiPopupManager).GetMethods()
-                .Where(mb => mb.Name.StartsWith("Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_") && !mb.Name.Contains("PDM") && CheckMethod(mb, "UserInterface/MenuContent/Popups/StandardPopupV2")).First();
-            popupV1 = typeof(VRCUiPopupManager).GetMethods()
-                .Where(mb => mb.Name.StartsWith("Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_") && !mb.Name.Contains("PDM") && CheckMethod(mb, "UserInterface/MenuContent/Popups/StandardPopup") && !CheckMethod(mb, "UserInterface/MenuContent/Popups/StandardPopupV2")).First();
-            closePopup = typeof(VRCUiPopupManager).GetMethods()
-                .Where(mb => mb.Name.StartsWith("Method_Public_Void_") && mb.Name.Length <= 21 && !mb.Name.Contains("PDM") && CheckMethod(mb, "POPUP")).First();
-            userDetailsMenu = UIExpansionKit.API.ExpansionKitApi.GetExpandedMenu(UIExpansionKit.API.ExpandedMenu.UserDetailsMenu);
 
             UIExpansionKit.API.LayoutDescription popupLayout = new UIExpansionKit.API.LayoutDescription
             {
@@ -48,14 +40,15 @@ namespace UserInfoExtensions
                 NumRows = 6
             };
             menu = UIExpansionKit.API.ExpansionKitApi.CreateCustomFullMenuPopup(popupLayout);
+            userDetailsMenu = UIExpansionKit.API.ExpansionKitApi.GetExpandedMenu(UIExpansionKit.API.ExpandedMenu.UserDetailsMenu);
+
             menu.AddLabel("General Things");
             menu.AddSpacer();
             menu.AddSimpleButton("Back", () => menu.Hide());
-            userDetailsMenu.AddSimpleButton("UserInfoExtensions", () => { menu.Show(); closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); });
+            userDetailsMenu.AddSimpleButton("UserInfoExtensions", () => { menu.Show(); Utilities.ClosePopup(); });
 
-            UserInfoExtensionsSettings.RegisterSettings();
             QuickMenuFromSocial.Init();
-            AuthorFromSocialMenu.Init();
+            GetAvatarAuthor.Init();
             BioButtons.Init();
             OpenInBrowser.Init();
 
@@ -63,6 +56,8 @@ namespace UserInfoExtensions
         }
         public override void VRChat_OnUiManagerInit()
         {
+            GetAvatarAuthor.UiInit();
+            Utilities.UiInit();
             BioButtons.UiInit();
             MelonLogger.Log("UI Initialized!");
         }
@@ -71,49 +66,21 @@ namespace UserInfoExtensions
             UserInfoExtensionsSettings.OnModSettingsApplied();
         }
 
-        public static void OnUserInfoOpen(MenuController __instance)
+        public static void OnUserInfoOpen()
         {
-            menuController = __instance;
-            AuthorFromSocialMenu.OnUserInfoOpen();
+            GetAvatarAuthor.OnUserInfoOpen();
             BioButtons.OnUserInfoOpen();
         }
-        public static void OnUserInfoClose()
-        {
-            menu.Hide();
-        }
-
-        public static void HideAll()
+        public static void HideAllPopups()
         {
             BioButtons.bioLanguagesPopup.Close();
             BioButtons.bioLinksPopup.Close();
             menu.Hide();
-            closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null);
+            Utilities.ClosePopup();
         }
-
-        public static void OpenPopupV2(string title, string text, string buttonText, Action onButtonClick) => popupV2.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, new object[5] { title, text, buttonText, (Il2CppSystem.Action) onButtonClick, null });
-        public static void OpenPopupV1(string title, string text, string buttonText, Action onButtonClick) => popupV1.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, new object[5] { title, text, buttonText, (Il2CppSystem.Action) onButtonClick, null });
-
-        //This method is practically stolen from https://github.com/BenjaminZehowlt/DynamicBonesSafety/blob/master/DynamicBonesSafetyMod.cs
-        public static bool CheckMethod(MethodBase methodBase, string match)
+        public static void OnUserInfoClose()
         {
-            try
-            {
-                return UnhollowerRuntimeLib.XrefScans.XrefScanner.XrefScan(methodBase)
-                    .Where(instance => instance.Type == UnhollowerRuntimeLib.XrefScans.XrefType.Global && instance.ReadAsObject().ToString().Contains(match)).Any();
-            }
-            catch { }
-            return false;
-        }
-        public static bool CheckUsed(MethodBase methodBase, string methodName)
-        {
-            try
-            {
-                return UnhollowerRuntimeLib.XrefScans.XrefScanner.UsedBy(methodBase)
-                    .Where(instance => instance.TryResolve() == null ? false : instance.TryResolve().Name.Contains(methodName)).Any();
-            }
-            catch { }
-            return false;
-
+            menu.Hide();
         }
     }
 
@@ -128,45 +95,60 @@ namespace UserInfoExtensions
             UserInfoExtensionsMod.menu.AddSimpleButton("To Quick Menu", ToQuickMenu);
 
             closeMenu = typeof(VRCUiManager).GetMethods()
-                            .Where(mb => mb.Name.StartsWith("Method_Public_Void_Boolean_") && mb.Name.Length <= 29 && UserInfoExtensionsMod.CheckUsed(mb, "Method_Public_Void_Vector3_Quaternion_SpawnOrientation_Boolean_Boolean_")).First();
+                            .Where(mb => mb.Name.StartsWith("Method_Public_Void_Boolean_") && mb.Name.Length <= 29 && Utilities.CheckUsed(mb, "Method_Public_Void_Vector3_Quaternion_SpawnOrientation_Boolean_Boolean_")).First();
             openQuickMenu = typeof(QuickMenu).GetMethods()
                                 .Where(mb => mb.Name.StartsWith("Method_Public_Void_Boolean_") && mb.Name.Length <= 29 && !mb.Name.Contains("PDM")).First();
         }
         public static void ToQuickMenu()
         {
-            UserInfoExtensionsMod.HideAll();
-
-            APIUser user = UserInfoExtensionsMod.menuController.activeUser;
+            UserInfoExtensionsMod.HideAllPopups();
 
             foreach (Player player in PlayerManager.field_Private_Static_PlayerManager_0.field_Private_List_1_Player_0)
             {
                 if (player.field_Private_APIUser_0 == null) continue;
-                if (player.field_Private_APIUser_0.id == user.id)
+                if (player.field_Private_APIUser_0.id == Utilities.ActiveUser.id)
                 {
                     closeMenu.Invoke(VRCUiManager.prop_VRCUiManager_0, new object[] { false }); //Closes Big Menu
                     openQuickMenu.Invoke(QuickMenu.prop_QuickMenu_0, new object[] { true }); //Opens Quick Menu
-                    QuickMenu.prop_QuickMenu_0.Method_Public_Void_Player_0(PlayerManager.Method_Public_Static_Player_String_0(user.id)); //Does the rest lmao
+                    QuickMenu.prop_QuickMenu_0.Method_Public_Void_Player_0(PlayerManager.Method_Public_Static_Player_String_0(Utilities.ActiveUser.id)); //Does the rest lmao
                     return;
                 }
             }
-            UserInfoExtensionsMod.OpenPopupV2("Notice:", "You cannot show this user on the Quick Menu because they are not in the same instance", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
+            Utilities.OpenPopupV2("Notice:", "You cannot show this user on the Quick Menu because they are not in the same instance", "Close", new Action(() => Utilities.ClosePopup()));
         }
     }
 
-    public class AuthorFromSocialMenu
+    public class GetAvatarAuthor
     {
         public static Il2CppSystem.Uri avatarLink;
         public static bool canGet = true;
 
+        public static PageAvatar avatarPage;
+        public static bool isFromSocialPage = false;
+
         public static void Init()
         {
-            if (UserInfoExtensionsSettings.AuthorFromSocialMenuButton) UserInfoExtensionsMod.userDetailsMenu.AddSimpleButton("Avatar Author", GetAvatarAuthor);
-            UserInfoExtensionsMod.menu.AddSimpleButton("Avatar Author", GetAvatarAuthor);
+            if (UserInfoExtensionsSettings.AuthorFromSocialMenuButton) UserInfoExtensionsMod.userDetailsMenu.AddSimpleButton("Avatar Author", FromSocial);
+            if (UserInfoExtensionsSettings.AuthorFromAvatarMenuButton) UIExpansionKit.API.ExpansionKitApi.GetExpandedMenu(UIExpansionKit.API.ExpandedMenu.AvatarMenu).AddSimpleButton("Avatar Author", FromAvatar);
+            UserInfoExtensionsMod.menu.AddSimpleButton("Avatar Author", FromSocial);
             UserInfoExtensionsMod.menu.AddSpacer();
+        }
+        public static void UiInit()
+        {
+            GameObject gameObject = GameObject.Find("UserInterface/MenuContent/Screens/Avatar");
+            avatarPage = gameObject.GetComponent<PageAvatar>();
         }
         public static void OnUserInfoOpen()
         {
-            avatarLink = new Il2CppSystem.Uri(UserInfoExtensionsMod.menuController.activeUser.currentAvatarImageUrl);
+            try
+            {
+                avatarLink = new Il2CppSystem.Uri(Utilities.ActiveUser.currentAvatarImageUrl);
+            }
+            catch
+            {
+                Utilities.OpenPopupV2("Notice:", "The avatar's author could not be grabbed!", "Close", new Action(() => Utilities.ClosePopup()));
+                return;
+            }
 
             string adjustedLink = string.Format("https://{0}", avatarLink.Authority);
 
@@ -178,13 +160,13 @@ namespace UserInfoExtensions
             avatarLink = new Il2CppSystem.Uri(adjustedLink.Trim("/".ToCharArray()));
         }
 
-        public static void GetAvatarAuthor()
+        public static void FromSocial()
         {
-            UserInfoExtensionsMod.HideAll();
+            UserInfoExtensionsMod.HideAllPopups();
 
             if (!canGet)
             {
-                UserInfoExtensionsMod.OpenPopupV2("Slow down!", "Please wait a little in between button presses", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
+                Utilities.OpenPopupV2("Slow down!", "Please wait a little in between button presses", "Close", new Action(() => Utilities.ClosePopup()));
                 return;
             }
 
@@ -195,10 +177,11 @@ namespace UserInfoExtensions
             try
             {
                 request.Send();
+                isFromSocialPage = true;
             }
-            catch (Exception)
+            catch 
             {
-                UserInfoExtensionsMod.OpenPopupV2("Error!", "Something went wrong and the author could not be retreived. Please try again", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
+                Utilities.OpenPopupV2("Error!", "Something went wrong and the author could not be retreived. Please try again", "Close", new Action(() => Utilities.ClosePopup()));
                 return;
             }
             finally
@@ -210,19 +193,24 @@ namespace UserInfoExtensions
         {
             JObject jsonData = JObject.Parse(response.DataAsText);
             JsonData requestedData = jsonData.ToObject<JsonData>();
-            APIUser.FetchUser(requestedData.ownerId, new Action<APIUser>(OnUserFetched), new Action<string>((thing) => { }));
+            OpenUserInSocialMenu(requestedData.ownerId);
         }
-        private static void OnUserFetched(APIUser user)
+
+        public static void FromAvatar()
         {
-            if (user.id == UserInfoExtensionsMod.menuController.activeUser.id)
+            UserInfoExtensionsMod.HideAllPopups();
+
+            if (!canGet)
             {
-                UserInfoExtensionsMod.OpenPopupV2("Notice:", "You are already viewing the avatar author", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
+                Utilities.OpenPopupV2("Slow down!", "Please wait a little in between button presses", "Close", new Action(() => Utilities.ClosePopup()));
                 return;
             }
-            GameObject gameObject = GameObject.Find("UserInterface/MenuContent/Screens/UserInfo");
-            VRCUiPage vrcUiPage = gameObject.GetComponent<VRCUiPage>();
-            vrcUiPage.Cast<PageUserInfo>().Method_Public_Void_APIUser_PDM_0(user);
+
+            MelonCoroutines.Start(StartTimer());
+
+            OpenUserInSocialMenu(avatarPage.avatar.field_Internal_ApiAvatar_0.authorId);
         }
+
         public static IEnumerator StartTimer()
         {
             canGet = false;
@@ -238,6 +226,22 @@ namespace UserInfoExtensions
             yield break;
         }
 
+        public static void OpenUserInSocialMenu(string userId) => APIUser.FetchUser(userId, new Action<APIUser>(OnUserFetched), new Action<string>((thing) => { Utilities.OpenPopupV2("Error!", "Something went wrong and the author could not be retreived.", "Close", new Action(() => Utilities.ClosePopup())); }));
+        private static void OnUserFetched(APIUser user)
+        {
+            if (isFromSocialPage && user.id == Utilities.ActiveUser.id)
+            {
+                Utilities.OpenPopupV2("Notice:", "You are already viewing the avatar author", "Close", new Action(() => Utilities.ClosePopup()));
+                isFromSocialPage = false;
+                return;
+            }
+            VRCUiManager.prop_VRCUiManager_0.Method_Public_Void_String_Boolean_0("UserInterface/MenuContent/Screens/UserInfo");
+            GameObject gameObject = GameObject.Find("UserInterface/MenuContent/Screens/UserInfo");
+            VRCUiPage vrcUiPage = gameObject.GetComponent<VRCUiPage>();
+            vrcUiPage.Cast<PageUserInfo>().Method_Public_Void_APIUser_PDM_0(user);
+        }
+
+
         public class JsonData
         {
             [JsonProperty("ownerId")]
@@ -247,8 +251,8 @@ namespace UserInfoExtensions
 
     public class BioButtons
     {
-        public static UserInfoExtentions.BioLinksPopup bioLinksPopup;
-        public static UserInfoExtentions.BioLanguagesPopup bioLanguagesPopup;
+        public static UserInfoExtentions.Component.BioLinksPopup bioLinksPopup;
+        public static UserInfoExtentions.Component.BioLanguagesPopup bioLanguagesPopup;
         public static List<Uri> bioLinks = new List<Uri>();
         public static List<string> userLanguages = new List<string>();
         public readonly static Dictionary<string, string> languageLookup = new Dictionary<string, string>
@@ -298,7 +302,7 @@ namespace UserInfoExtensions
         }
         public static void UiInit() //This is a shit show but it works so shshshhhshh
         {
-            ClassInjector.RegisterTypeInIl2Cpp<UserInfoExtentions.BioLinksPopup>();
+            ClassInjector.RegisterTypeInIl2Cpp<UserInfoExtentions.Component.BioLinksPopup>();
             GameObject popupGameObject = GameObject.Find("UserInterface/MenuContent/Popups/UpdateStatusPopup");
             popupGameObject = UnityEngine.Object.Instantiate(popupGameObject, popupGameObject.transform.parent);
             UnityEngine.Object.DestroyImmediate(popupGameObject.GetComponent<PopupUpdateStatus>());
@@ -307,7 +311,7 @@ namespace UserInfoExtensions
             UnityEngine.Object.DestroyImmediate(popupGameObject.transform.Find("Popup/InputFieldStatus").gameObject);
             foreach (I2.Loc.Localize component in popupGameObject.GetComponentsInChildren<I2.Loc.Localize>()) UnityEngine.Object.Destroy(component);
 
-            bioLinksPopup = popupGameObject.AddComponent<UserInfoExtentions.BioLinksPopup>();
+            bioLinksPopup = popupGameObject.AddComponent<UserInfoExtentions.Component.BioLinksPopup>();
 
             bioLinksPopup.screenType = "LINKS_POPUP"; //Required to make popup work
 
@@ -363,7 +367,7 @@ namespace UserInfoExtensions
 
             bioLinksPopup.gameObject.name = "BioLinksPopup";
 
-            ClassInjector.RegisterTypeInIl2Cpp<UserInfoExtentions.BioLanguagesPopup>();
+            ClassInjector.RegisterTypeInIl2Cpp<UserInfoExtentions.Component.BioLanguagesPopup>();
             popupGameObject = GameObject.Find("UserInterface/MenuContent/Popups/UpdateStatusPopup");
             popupGameObject = UnityEngine.Object.Instantiate(popupGameObject, popupGameObject.transform.parent);
             UnityEngine.Object.DestroyImmediate(popupGameObject.GetComponent<PopupUpdateStatus>());
@@ -372,7 +376,7 @@ namespace UserInfoExtensions
             UnityEngine.Object.DestroyImmediate(popupGameObject.transform.Find("Popup/InputFieldStatus").gameObject);
             foreach (I2.Loc.Localize component in popupGameObject.GetComponentsInChildren<I2.Loc.Localize>()) UnityEngine.Object.Destroy(component);
 
-            bioLanguagesPopup = popupGameObject.AddComponent<UserInfoExtentions.BioLanguagesPopup>();
+            bioLanguagesPopup = popupGameObject.AddComponent<UserInfoExtentions.Component.BioLanguagesPopup>();
 
             bioLanguagesPopup.screenType = "LANGUAGES_POPUP"; //Required to make popup work
 
@@ -412,7 +416,7 @@ namespace UserInfoExtensions
         public static void OnUserInfoOpen()
         {
             userLanguages.Clear();
-            foreach (string tag in UserInfoExtensionsMod.menuController.activeUser.tags) //Cant use where here because Il2Cpp List and regular List
+            foreach (string tag in Utilities.ActiveUser.tags) //Cant use where here because Il2Cpp List and regular List
             {
                 if (tag.StartsWith("language_")) userLanguages.Add(languageLookup[tag.Substring(9)]);
             }
@@ -420,33 +424,33 @@ namespace UserInfoExtensions
 
         public static void GetBio()
         {
-            UserInfoExtensionsMod.HideAll();
+            UserInfoExtensionsMod.HideAllPopups();
 
-            if (UserInfoExtensionsMod.menuController.activeUser.bio != null && UserInfoExtensionsMod.menuController.activeUser.bio.Length >= 100)
+            if (Utilities.ActiveUser.bio != null && Utilities.ActiveUser.bio.Length >= 100)
             {
-                UserInfoExtensionsMod.OpenPopupV1("Bio:", UserInfoExtensionsMod.menuController.activeUser.bio, "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
+                Utilities.OpenPopupV1("Bio:", Utilities.ActiveUser.bio, "Close", new Action(() => Utilities.ClosePopup()));
             }
             else
             {
-                UserInfoExtensionsMod.OpenPopupV2("Bio:", UserInfoExtensionsMod.menuController.activeUser.bio, "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
+                Utilities.OpenPopupV2("Bio:", Utilities.ActiveUser.bio, "Close", new Action(() => Utilities.ClosePopup()));
             }
         }
         public static void ShowBioLinksPopup()
         {
-            UserInfoExtensionsMod.HideAll();
+            UserInfoExtensionsMod.HideAllPopups();
 
-            CheckLinks(UserInfoExtensionsMod.menuController.activeUser.bioLinks);
-            if (UserInfoExtensionsMod.menuController.activeUser.bioLinks == null)
+            CheckLinks(Utilities.ActiveUser.bioLinks);
+            if (Utilities.ActiveUser.bioLinks == null)
             {
-                UserInfoExtensionsMod.OpenPopupV2("Notice:", "Cannot get users links", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
+                Utilities.OpenPopupV2("Notice:", "Cannot get users links", "Close", new Action(() => Utilities.ClosePopup()));
             }
-            else if (UserInfoExtensionsMod.menuController.activeUser.bioLinks.Count == 0)
+            else if (Utilities.ActiveUser.bioLinks.Count == 0)
             {
-                UserInfoExtensionsMod.OpenPopupV2("Notice:", "This user has no bio links", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
+                Utilities.OpenPopupV2("Notice:", "This user has no bio links", "Close", new Action(() => Utilities.ClosePopup()));
             }
             else if (bioLinks.Count == 0)
             {
-                UserInfoExtensionsMod.OpenPopupV2("Notice:", "This user has invalid links", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
+                Utilities.OpenPopupV2("Notice:", "This user has invalid links", "Close", new Action(() => Utilities.ClosePopup()));
             }
             else
             {
@@ -473,11 +477,11 @@ namespace UserInfoExtensions
 
         public static void ShowBioLanguagesPopup()
         {
-            UserInfoExtensionsMod.HideAll();
+            UserInfoExtensionsMod.HideAllPopups();
 
             if (userLanguages == null || userLanguages.Count == 0)
             {
-                UserInfoExtensionsMod.OpenPopupV2("Notice:", "This user has no bio languages", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
+                Utilities.OpenPopupV2("Notice:", "This user has no bio languages", "Close", new Action(() => Utilities.ClosePopup()));
             }
             else
             {
@@ -502,10 +506,10 @@ namespace UserInfoExtensions
 
         public static void OpenUserInBrowser()
         {
-            UserInfoExtensionsMod.HideAll();
+            UserInfoExtensionsMod.HideAllPopups();
 
-            System.Diagnostics.Process.Start("https://vrchat.com/home/user/" + UserInfoExtensionsMod.menuController.activeUserId);
-            UserInfoExtensionsMod.OpenPopupV2("Notice:", "User has been opened in the default browser", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
+            System.Diagnostics.Process.Start("https://vrchat.com/home/user/" + Utilities.ActiveUser.id);
+            Utilities.OpenPopupV2("Notice:", "User has been opened in the default browser", "Close", new Action(() => Utilities.ClosePopup()));
         }
     }
 }
