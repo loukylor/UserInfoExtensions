@@ -6,7 +6,7 @@ using UnhollowerBaseLib.Attributes;
 using UnityEngine;
 using UserInfoExtensions;
 
-namespace UserInfoExtentions
+namespace UserInfoExtentions.Component
 {
     //Learned from Knah's UIExpansionKit (https://github.com/knah/VRCMods/blob/master/UIExpansionKit/Components/EnableDisableListener.cs)
     public class BioLinksPopup : VRCUiPopup
@@ -64,7 +64,7 @@ namespace UserInfoExtentions
             {
                 System.Diagnostics.Process.Start(currentLink.OriginalString);
                 Close();
-                UserInfoExtensionsMod.OpenPopupV2("Notice:", "Link has been opened in the default browser", "Close", new Action(() => { UserInfoExtensionsMod.closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null); }));
+                Utilities.OpenPopupV2("Notice:", "Link has been opened in the default browser", "Close", new Action(() => Utilities.ClosePopup()));
                 currentLink = null;
             }
         }
