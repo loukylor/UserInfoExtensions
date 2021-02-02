@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
-using BestHTTP;
 using Harmony;
 using MelonLoader;
 using Newtonsoft.Json;
@@ -14,6 +15,7 @@ using UserInfoExtentions;
 using VRC;
 using VRC.Core;
 using VRC.UI;
+
 [assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "2.1.0", "loukylor", "https://github.com/loukylor/UserInfoExtensions")]
 [assembly: MelonGame("VRChat", "VRChat")]
 
@@ -30,9 +32,9 @@ namespace UserInfoExtensions
 
             Utilities.Init();
 
-            harmonyInstance.Patch(AccessTools.Method(typeof(MenuController), "Method_Public_Void_APIUser_0"), postfix: new HarmonyMethod(typeof(UserInfoExtensionsMod).GetMethod("OnUserInfoOpen", BindingFlags.Static | BindingFlags.Public)));
-            harmonyInstance.Patch(AccessTools.Method(typeof(PageUserInfo), "Back"), postfix: new HarmonyMethod(typeof(UserInfoExtensionsMod).GetMethod("OnUserInfoClose", BindingFlags.Static | BindingFlags.Public)));
-
+            Harmony.Patch(AccessTools.Method(typeof(MenuController), "Method_Public_Void_APIUser_0"), postfix: new HarmonyMethod(typeof(UserInfoExtensionsMod).GetMethod("OnUserInfoOpen", BindingFlags.Static | BindingFlags.Public)));
+            Harmony.Patch(AccessTools.Method(typeof(PageUserInfo), "Back"), postfix: new HarmonyMethod(typeof(UserInfoExtensionsMod).GetMethod("OnUserInfoClose", BindingFlags.Static | BindingFlags.Public)));
+            Harmony.Patch(typeof(VRCUiManager).GetMethod("Method_Public_VRCUiPage_VRCUiPage_0"), new HarmonyMethod(typeof(UserInfoExtensionsMod).GetMethod("OnPageOpen")));
             UIExpansionKit.API.LayoutDescription popupLayout = new UIExpansionKit.API.LayoutDescription
             {
                 RowHeight = 80,
@@ -52,18 +54,22 @@ namespace UserInfoExtensions
             BioButtons.Init();
             OpenInBrowser.Init();
 
-            MelonLogger.Log("Initialized!");
+            MelonLogger.Msg("Initialized!");
         }
         public override void VRChat_OnUiManagerInit()
         {
             GetAvatarAuthor.UiInit();
             Utilities.UiInit();
             BioButtons.UiInit();
-            MelonLogger.Log("UI Initialized!");
+            MelonLogger.Msg("UI Initialized!");
         }
-        public override void OnModSettingsApplied()
+        public override void OnPreferencesSaved()
         {
             UserInfoExtensionsSettings.OnModSettingsApplied();
+        }
+        public override void OnUpdate()
+        {
+            if (Utilities.ToMainThreadQueue.TryDequeue(out Action action)) action();
         }
 
         public static void OnUserInfoOpen()
@@ -82,6 +88,10 @@ namespace UserInfoExtensions
         {
             menu.Hide();
         }
+        public static void OnPageOpen(VRCUiPage __0)
+        {
+            BioButtons.OnPageOpen(__0);
+        }
     }
 
     public class QuickMenuFromSocial
@@ -95,7 +105,7 @@ namespace UserInfoExtensions
             UserInfoExtensionsMod.menu.AddSimpleButton("To Quick Menu", ToQuickMenu);
 
             closeMenu = typeof(VRCUiManager).GetMethods()
-                            .Where(mb => mb.Name.StartsWith("Method_Public_Void_Boolean_") && mb.Name.Length <= 29 && Utilities.CheckUsed(mb, "Method_Public_Void_Vector3_Quaternion_SpawnOrientation_Boolean_Boolean_")).First();
+                            .Where(mb => mb.Name.StartsWith("Method_Public_Void_Boolean_Boolean_") && Utilities.CheckUsed(mb, "Method_Public_Virtual_Void_String_String_0")).First();
             openQuickMenu = typeof(QuickMenu).GetMethods()
                                 .Where(mb => mb.Name.StartsWith("Method_Public_Void_Boolean_") && mb.Name.Length <= 29 && !mb.Name.Contains("PDM")).First();
         }
@@ -108,7 +118,7 @@ namespace UserInfoExtensions
                 if (player.field_Private_APIUser_0 == null) continue;
                 if (player.field_Private_APIUser_0.id == Utilities.ActiveUser.id)
                 {
-                    closeMenu.Invoke(VRCUiManager.prop_VRCUiManager_0, new object[] { false }); //Closes Big Menu
+                    closeMenu.Invoke(VRCUiManager.prop_VRCUiManager_0, new object[] { true, false }); //Closes Big Menu
                     openQuickMenu.Invoke(QuickMenu.prop_QuickMenu_0, new object[] { true }); //Opens Quick Menu
                     QuickMenu.prop_QuickMenu_0.Method_Public_Void_Player_0(PlayerManager.Method_Public_Static_Player_String_0(Utilities.ActiveUser.id)); //Does the rest lmao
                     return;
@@ -172,11 +182,11 @@ namespace UserInfoExtensions
 
             MelonCoroutines.Start(StartTimer());
 
-            HTTPRequest request = new HTTPRequest(avatarLink, new Action<HTTPRequest, HTTPResponse>((HTTPRequest rq, HTTPResponse resp) => OnAvatarInfoReceived(resp)));
+            WebRequest request = WebRequest.Create(avatarLink.OriginalString);
 
             try
             {
-                request.Send();
+                request.BeginGetResponse(new AsyncCallback(OnAvatarInfoReceived), request);
                 isFromSocialPage = true;
             }
             catch 
@@ -184,16 +194,19 @@ namespace UserInfoExtensions
                 Utilities.OpenPopupV2("Error!", "Something went wrong and the author could not be retreived. Please try again", "Close", new Action(() => Utilities.ClosePopup()));
                 return;
             }
-            finally
-            {
-                request.Dispose();
-            }
         }
-        private static void OnAvatarInfoReceived(HTTPResponse response)
+        private static async void OnAvatarInfoReceived(IAsyncResult ar)
         {
-            JObject jsonData = JObject.Parse(response.DataAsText);
+            WebResponse response = ((WebRequest) ar.AsyncState).EndGetResponse(ar);
+            StreamReader streamReader = new StreamReader(response.GetResponseStream());
+            await Utilities.YieldToMainThread();
+
+            JObject jsonData = JObject.Parse(streamReader.ReadToEnd());
             JsonData requestedData = jsonData.ToObject<JsonData>();
             OpenUserInSocialMenu(requestedData.ownerId);
+
+            response.Close();
+            streamReader.Close();
         }
 
         public static void FromAvatar()
@@ -208,7 +221,7 @@ namespace UserInfoExtensions
 
             MelonCoroutines.Start(StartTimer());
 
-            OpenUserInSocialMenu(avatarPage.avatar.field_Internal_ApiAvatar_0.authorId);
+            OpenUserInSocialMenu(avatarPage.field_Public_SimpleAvatarPedestal_0.field_Internal_ApiAvatar_0.authorId);
         }
 
         public static IEnumerator StartTimer()
@@ -235,10 +248,10 @@ namespace UserInfoExtensions
                 isFromSocialPage = false;
                 return;
             }
-            VRCUiManager.prop_VRCUiManager_0.Method_Public_Void_String_Boolean_0("UserInterface/MenuContent/Screens/UserInfo");
+            VRCUiManager.prop_VRCUiManager_0.Method_Public_Void_String_Boolean_0("UserInterface/MenuContent/Screens/UserInfo"); //Open UserInfo Menu
             GameObject gameObject = GameObject.Find("UserInterface/MenuContent/Screens/UserInfo");
             VRCUiPage vrcUiPage = gameObject.GetComponent<VRCUiPage>();
-            vrcUiPage.Cast<PageUserInfo>().Method_Public_Void_APIUser_PDM_0(user);
+            vrcUiPage.Cast<PageUserInfo>().Method_Public_Void_APIUser_PDM_0(user); //Setup UserInfo
         }
 
 
@@ -313,10 +326,10 @@ namespace UserInfoExtensions
 
             bioLinksPopup = popupGameObject.AddComponent<UserInfoExtentions.Component.BioLinksPopup>();
 
-            bioLinksPopup.screenType = "LINKS_POPUP"; //Required to make popup work
+            bioLinksPopup.field_Public_String_0 = "LINKS_POPUP"; //Required to make popup work
 
-            bioLinksPopup.closePopupButton = popupGameObject.transform.Find("Popup/ExitButton").GetComponent<UnityEngine.UI.Button>();
-            bioLinksPopup.closePopupButton.onClick.AddListener((UnityEngine.Events.UnityAction) (() => bioLinksPopup.Close()));
+            bioLinksPopup.field_Public_Button_0 = popupGameObject.transform.Find("Popup/ExitButton").GetComponent<UnityEngine.UI.Button>();
+            bioLinksPopup.field_Public_Button_0.onClick.AddListener((UnityEngine.Events.UnityAction) (() => bioLinksPopup.Close()));
 
             bioLinksPopup.toggleGroup = popupGameObject.GetComponent<UnityEngine.UI.ToggleGroup>();
 
@@ -378,10 +391,10 @@ namespace UserInfoExtensions
 
             bioLanguagesPopup = popupGameObject.AddComponent<UserInfoExtentions.Component.BioLanguagesPopup>();
 
-            bioLanguagesPopup.screenType = "LANGUAGES_POPUP"; //Required to make popup work
+            bioLanguagesPopup.field_Public_String_0 = "LANGUAGES_POPUP"; //Required to make popup work
 
-            bioLanguagesPopup.closePopupButton = popupGameObject.transform.Find("Popup/ExitButton").GetComponent<UnityEngine.UI.Button>();
-            bioLanguagesPopup.closePopupButton.onClick.AddListener((UnityEngine.Events.UnityAction)(() => bioLanguagesPopup.Close()));
+            bioLanguagesPopup.field_Public_Button_0 = popupGameObject.transform.Find("Popup/ExitButton").GetComponent<UnityEngine.UI.Button>();
+            bioLanguagesPopup.field_Public_Button_0.onClick.AddListener((UnityEngine.Events.UnityAction)(() => bioLanguagesPopup.Close()));
 
             bioLanguagesPopup.closeButton = popupGameObject.transform.Find("Popup/Buttons/UpdateButton").GetComponent<UnityEngine.UI.Button>();
             bioLanguagesPopup.closeButton.onClick = new UnityEngine.UI.Button.ButtonClickedEvent();
@@ -421,6 +434,12 @@ namespace UserInfoExtensions
                 if (tag.StartsWith("language_")) userLanguages.Add(languageLookup[tag.Substring(9)]);
             }
         }
+        public static void OnPageOpen(VRCUiPage __0)
+        {
+             // This field (which is very important) is literally changed at random during runtime, it changes to random numbers to an invalid string so i have to set it before the page opens
+            if (__0.TryCast<UserInfoExtentions.Component.BioLanguagesPopup>() != null) __0.field_Public_String_0 = "LINKS_POPUP";
+            if (__0.TryCast<UserInfoExtentions.Component.BioLinksPopup>() != null) __0.field_Public_String_0 = "BIO_LINKS";
+        }
 
         public static void GetBio()
         {
@@ -439,22 +458,25 @@ namespace UserInfoExtensions
         {
             UserInfoExtensionsMod.HideAllPopups();
 
-            CheckLinks(Utilities.ActiveUser.bioLinks);
             if (Utilities.ActiveUser.bioLinks == null)
             {
                 Utilities.OpenPopupV2("Notice:", "Cannot get users links", "Close", new Action(() => Utilities.ClosePopup()));
             }
-            else if (Utilities.ActiveUser.bioLinks.Count == 0)
-            {
-                Utilities.OpenPopupV2("Notice:", "This user has no bio links", "Close", new Action(() => Utilities.ClosePopup()));
-            }
-            else if (bioLinks.Count == 0)
-            {
-                Utilities.OpenPopupV2("Notice:", "This user has invalid links", "Close", new Action(() => Utilities.ClosePopup()));
-            }
             else
             {
-                VRCUiManager.prop_VRCUiManager_0.ShowScreenButton("UserInterface/MenuContent/Popups/BioLinksPopup");
+                CheckLinks(Utilities.ActiveUser.bioLinks);
+                if (Utilities.ActiveUser.bioLinks.Count == 0)
+                {
+                    Utilities.OpenPopupV2("Notice:", "This user has no bio links", "Close", new Action(() => Utilities.ClosePopup()));
+                }
+                else if (bioLinks.Count == 0)
+                {
+                    Utilities.OpenPopupV2("Notice:", "This user has invalid links", "Close", new Action(() => Utilities.ClosePopup()));
+                }
+                else
+                {
+                    VRCUiManager.prop_VRCUiManager_0.ShowScreenButton("UserInterface/MenuContent/Popups/BioLinksPopup");
+                }
             }
         }
         public static void CheckLinks(Il2CppSystem.Collections.Generic.List<string> checkLinks)

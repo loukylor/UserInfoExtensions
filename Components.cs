@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
-using BestHTTP;
+using System.IO;
+using System.Net;
 using MelonLoader;
 using UnhollowerBaseLib.Attributes;
 using UnityEngine;
@@ -21,16 +22,16 @@ namespace UserInfoExtentions.Component
         public new void OnEnable()
         {
             base.OnEnable();
-            for (int i = 0; i < linkStates.Length; i++)
+            for (int index = 0; index < linkStates.Length; index++)
             {
-                linkStates[i].SetActive(true);
-                if (i < BioButtons.bioLinks.Count)
+                linkStates[index].SetActive(true);
+                if (index < BioButtons.bioLinks.Count)
                 {
-                    MelonCoroutines.Start(DownloadTexture(i));
+                    MelonCoroutines.Start(DownloadTexture(index));
                 }
                 else
                 {
-                    linkStates[i].SetActive(false);
+                    linkStates[index].SetActive(false);
                 }
             }
         }
@@ -44,19 +45,26 @@ namespace UserInfoExtentions.Component
         public IEnumerator DownloadTexture(int index)
         {
             linkTexts[index].text = BioButtons.bioLinks[index].OriginalString.Length >= 43 ? BioButtons.bioLinks[index].OriginalString.Substring(0, 43) : BioButtons.bioLinks[index].OriginalString;
-            HTTPRequest iconRequest = new HTTPRequest(new Il2CppSystem.Uri($"http://www.google.com/s2/favicons?domain_url={BioButtons.bioLinks[index].Host}&sz=128"), new Action<HTTPRequest, HTTPResponse>((HTTPRequest rq, HTTPResponse resp) => OnTextureLoaded(resp, index)));
+            WebRequest iconRequest = WebRequest.Create($"http://www.google.com/s2/favicons?domain_url={BioButtons.bioLinks[index].Host}&sz=64");
             try
             {
-                iconRequest.Send();
+                iconRequest.BeginGetResponse(OnTextureLoaded, new Result() { request = iconRequest, index = index });
             }
-            finally
-            {
-                iconRequest.Dispose();
-            }
+            catch { }
             yield break;
         }
         [method: HideFromIl2Cpp]
-        public void OnTextureLoaded(HTTPResponse response, int index) => icons[index].texture = response.DataAsTexture2D;
+        public async void OnTextureLoaded(IAsyncResult ar)
+        {
+            Result result = (Result) ar.AsyncState;
+            WebResponse response = (result.request).EndGetResponse(ar);
+            MemoryStream stream = new MemoryStream();
+            response.GetResponseStream().CopyTo(stream);
+            await Utilities.YieldToMainThread();
+            Texture2D tex = new Texture2D(2, 2);
+            ImageConversion.LoadImage(tex, stream.ToArray());
+            icons[result.index].texture = tex;
+        }
 
         public void OnOpenLink()
         {
@@ -71,6 +79,12 @@ namespace UserInfoExtentions.Component
 
         public unsafe BioLinksPopup(IntPtr obj0) : base(obj0)
         {
+        }
+
+        public class Result
+        {
+            public WebRequest request;
+            public int index;
         }
     }
     public class BioLanguagesPopup : VRCUiPopup

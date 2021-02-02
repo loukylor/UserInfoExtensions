@@ -17,15 +17,15 @@ namespace UserInfoExtensions
 
         public static void RegisterSettings()
         {
-            MelonPrefs.RegisterCategory(catagory, "UserInfoExtensions Settings");
+            MelonPreferences.CreateCategory(catagory, "UserInfoExtensions Settings");
 
-            MelonPrefs.RegisterBool(catagory, nameof(QuickMenuFromSocialButton), false, "Show \"To Quick Menu\" button");
-            MelonPrefs.RegisterBool(catagory, nameof(AuthorFromSocialMenuButton), false, "Show \"Avatar Author\" button in Social Menu");
-            MelonPrefs.RegisterBool(catagory, nameof(AuthorFromAvatarMenuButton), true, "Show \"Avatar Author\" button in Avatar Menu");
-            MelonPrefs.RegisterBool(catagory, nameof(BioButton), false, "Show \"Bio\" button");
-            MelonPrefs.RegisterBool(catagory, nameof(BioLinksButton), false, "Show \"Bio Links\" button");
-            MelonPrefs.RegisterBool(catagory, nameof(BioLanguagesButton), false, "Show \"Bio Languages\" button");
-            MelonPrefs.RegisterBool(catagory, nameof(OpenUserInBrowserButton), false, "Show \"Open User in Browser\" button");
+            MelonPreferences.CreateEntry(catagory, nameof(QuickMenuFromSocialButton), false, "Show \"To Quick Menu\" button");
+            MelonPreferences.CreateEntry(catagory, nameof(AuthorFromSocialMenuButton), false, "Show \"Avatar Author\" button in Social Menu");
+            MelonPreferences.CreateEntry(catagory, nameof(AuthorFromAvatarMenuButton), true, "Show \"Avatar Author\" button in Avatar Menu");
+            MelonPreferences.CreateEntry(catagory, nameof(BioButton), false, "Show \"Bio\" button");
+            MelonPreferences.CreateEntry(catagory, nameof(BioLinksButton), false, "Show \"Bio Links\" button");
+            MelonPreferences.CreateEntry(catagory, nameof(BioLanguagesButton), false, "Show \"Bio Languages\" button");
+            MelonPreferences.CreateEntry(catagory, nameof(OpenUserInBrowserButton), false, "Show \"Open User in Browser\" button");
 
             OnModSettingsApplied();
         }
@@ -34,7 +34,7 @@ namespace UserInfoExtensions
         { 
             foreach (FieldInfo fieldInfo in typeof(UserInfoExtensionsSettings).GetFields())
             {
-                fieldInfo.SetValue(null, MelonPrefs.GetBool(catagory, fieldInfo.Name));
+                fieldInfo.SetValue(null, MelonPreferences.GetEntryValue<bool>(catagory, fieldInfo.Name));
             }
         }
     }
