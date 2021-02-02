@@ -2,6 +2,7 @@
 using System.Collections;
 using System.IO;
 using System.Net;
+using System.Threading.Tasks;
 using MelonLoader;
 using UnhollowerBaseLib.Attributes;
 using UnityEngine;
@@ -27,7 +28,7 @@ namespace UserInfoExtentions.Component
                 linkStates[index].SetActive(true);
                 if (index < BioButtons.bioLinks.Count)
                 {
-                    MelonCoroutines.Start(DownloadTexture(index));
+                    DownloadTexture(index);
                 }
                 else
                 {
@@ -42,28 +43,20 @@ namespace UserInfoExtentions.Component
         }
 
         [method: HideFromIl2Cpp]
-        public IEnumerator DownloadTexture(int index)
+        public async void DownloadTexture(int index)
         {
             linkTexts[index].text = BioButtons.bioLinks[index].OriginalString.Length >= 43 ? BioButtons.bioLinks[index].OriginalString.Substring(0, 43) : BioButtons.bioLinks[index].OriginalString;
             WebRequest iconRequest = WebRequest.Create($"http://www.google.com/s2/favicons?domain_url={BioButtons.bioLinks[index].Host}&sz=64");
-            try
-            {
-                iconRequest.BeginGetResponse(OnTextureLoaded, new Result() { request = iconRequest, index = index });
-            }
-            catch { }
-            yield break;
-        }
-        [method: HideFromIl2Cpp]
-        public async void OnTextureLoaded(IAsyncResult ar)
-        {
-            Result result = (Result) ar.AsyncState;
-            WebResponse response = (result.request).EndGetResponse(ar);
+
+            WebResponse response = await iconRequest.GetResponseAsync().NoAwait();
+
             MemoryStream stream = new MemoryStream();
             response.GetResponseStream().CopyTo(stream);
+
             await Utilities.YieldToMainThread();
             Texture2D tex = new Texture2D(2, 2);
             ImageConversion.LoadImage(tex, stream.ToArray());
-            icons[result.index].texture = tex;
+            icons[index].texture = tex;
         }
 
         public void OnOpenLink()
@@ -79,12 +72,6 @@ namespace UserInfoExtentions.Component
 
         public unsafe BioLinksPopup(IntPtr obj0) : base(obj0)
         {
-        }
-
-        public class Result
-        {
-            public WebRequest request;
-            public int index;
         }
     }
     public class BioLanguagesPopup : VRCUiPopup

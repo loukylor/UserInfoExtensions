@@ -170,7 +170,7 @@ namespace UserInfoExtensions
             avatarLink = new Il2CppSystem.Uri(adjustedLink.Trim("/".ToCharArray()));
         }
 
-        public static void FromSocial()
+        public static async void FromSocial()
         {
             UserInfoExtensionsMod.HideAllPopups();
 
@@ -186,27 +186,24 @@ namespace UserInfoExtensions
 
             try
             {
-                request.BeginGetResponse(new AsyncCallback(OnAvatarInfoReceived), request);
+                WebResponse response = await request.GetResponseAsync().NoAwait();
                 isFromSocialPage = true;
+
+                StreamReader streamReader = new StreamReader(response.GetResponseStream());
+                JObject jsonData = JObject.Parse(streamReader.ReadToEnd());
+                JsonData requestedData = jsonData.ToObject<JsonData>();
+
+                await Utilities.YieldToMainThread();
+                OpenUserInSocialMenu(requestedData.ownerId);
+
+                response.Close();
+                streamReader.Close();
             }
             catch 
             {
                 Utilities.OpenPopupV2("Error!", "Something went wrong and the author could not be retreived. Please try again", "Close", new Action(() => Utilities.ClosePopup()));
                 return;
             }
-        }
-        private static async void OnAvatarInfoReceived(IAsyncResult ar)
-        {
-            WebResponse response = ((WebRequest) ar.AsyncState).EndGetResponse(ar);
-            StreamReader streamReader = new StreamReader(response.GetResponseStream());
-            await Utilities.YieldToMainThread();
-
-            JObject jsonData = JObject.Parse(streamReader.ReadToEnd());
-            JsonData requestedData = jsonData.ToObject<JsonData>();
-            OpenUserInSocialMenu(requestedData.ownerId);
-
-            response.Close();
-            streamReader.Close();
         }
 
         public static void FromAvatar()

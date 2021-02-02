@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using VRC.Core;
 
 namespace UserInfoExtentions
@@ -63,7 +64,7 @@ namespace UserInfoExtentions
 
         }
 
-        // Thank you Knah for teaching me this
+        // Thank you Knah for teaching me this (this is literally his code copied and pasted so)
         public static MainThreadAwaitable YieldToMainThread()
         {
             return new MainThreadAwaitable();
@@ -81,6 +82,19 @@ namespace UserInfoExtentions
             {
                 ToMainThreadQueue.Enqueue(continuation);
             }
+        }
+
+    }
+    public static class Extensions
+    {
+        public static Task<TResult> NoAwait<TResult>(this Task<TResult> task)
+        {
+            task.ContinueWith(tsk =>
+            {
+                if (tsk.IsFaulted)
+                    MelonLoader.MelonLogger.Error($"Free-floating Task failed with exception: {tsk.Exception}");
+            });
+            return task;
         }
     }
 }
