@@ -29,7 +29,7 @@ namespace UserInfoExtensions
         public override void OnApplicationStart()
         {
             UserInfoExtensionsSettings.RegisterSettings();
-
+            
             Utilities.Init();
 
             Harmony.Patch(AccessTools.Method(typeof(MenuController), "Method_Public_Void_APIUser_0"), postfix: new HarmonyMethod(typeof(UserInfoExtensionsMod).GetMethod("OnUserInfoOpen", BindingFlags.Static | BindingFlags.Public)));
@@ -62,6 +62,10 @@ namespace UserInfoExtensions
             Utilities.UiInit();
             BioButtons.UiInit();
             MelonLogger.Msg("UI Initialized!");
+        }
+        public static void print(MethodBase __originalMethod)
+        {
+            MelonLogger.Msg(__originalMethod.Name);
         }
         public override void OnPreferencesSaved()
         {
@@ -107,7 +111,7 @@ namespace UserInfoExtensions
             closeMenu = typeof(VRCUiManager).GetMethods()
                             .Where(mb => mb.Name.StartsWith("Method_Public_Void_Boolean_Boolean_") && Utilities.CheckUsed(mb, "Method_Public_Virtual_Void_String_String_0")).First();
             openQuickMenu = typeof(QuickMenu).GetMethods()
-                                .Where(mb => mb.Name.StartsWith("Method_Public_Void_Boolean_") && mb.Name.Length <= 29 && !mb.Name.Contains("PDM")).First();
+                            .Where(mb => mb.Name.StartsWith("Method_Public_Void_Boolean_") && mb.Name.Length <= 29 && !Utilities.CheckUsed(mb, "Method_Public_Void_EnumNPublicSealed") && !Utilities.CheckUsed(mb, "Method_Private_Void_Int32_")).First();
         }
         public static void ToQuickMenu()
         {

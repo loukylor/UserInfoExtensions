@@ -29,7 +29,7 @@ namespace UserInfoExtentions
             popupV1 = typeof(VRCUiPopupManager).GetMethods()
                 .Where(mb => mb.Name.StartsWith("Method_Public_Void_String_String_String_Action_Action_1_VRCUiPopup_") && !mb.Name.Contains("PDM") && CheckMethod(mb, "UserInterface/MenuContent/Popups/StandardPopup") && !CheckMethod(mb, "UserInterface/MenuContent/Popups/StandardPopupV2")).First();
             closePopup = typeof(VRCUiPopupManager).GetMethods()
-                .Where(mb => mb.Name.StartsWith("Method_Public_Void_") && mb.Name.Length <= 21 && !mb.Name.Contains("PDM") && CheckUsed(mb, "Method_Private_Boolean_APIUser_PDM_4")).First();
+                .Where(mb => mb.Name.StartsWith("Method_Public_Void_String_") && mb.Name.Length <= 28 && !mb.Name.Contains("PDM") && CheckUsed(mb, "Close")).First();
         }
 
         public static void UiInit()
@@ -39,7 +39,7 @@ namespace UserInfoExtentions
 
         public static void OpenPopupV2(string title, string text, string buttonText, Action onButtonClick) => popupV2.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, new object[5] { title, text, buttonText, (Il2CppSystem.Action)onButtonClick, null });
         public static void OpenPopupV1(string title, string text, string buttonText, Action onButtonClick) => popupV1.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, new object[5] { title, text, buttonText, (Il2CppSystem.Action)onButtonClick, null });
-        public static void ClosePopup() => closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, null);
+        public static void ClosePopup() => closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, new object[] { "POPUP" });
 
         // This method is practically stolen from https://github.com/BenjaminZehowlt/DynamicBonesSafety/blob/master/DynamicBonesSafetyMod.cs
         public static bool CheckMethod(MethodBase methodBase, string match)
@@ -57,14 +57,13 @@ namespace UserInfoExtentions
             try
             {
                 return UnhollowerRuntimeLib.XrefScans.XrefScanner.UsedBy(methodBase)
-                    .Where(instance => instance.TryResolve() == null ? false : instance.TryResolve().Name.Contains(methodName)).Any();
+                    .Where(instance => instance.TryResolve() != null && instance.TryResolve().Name.Contains(methodName)).Any();
             }
             catch { }
             return false;
-
         }
 
-        // Thank you Knah for teaching me this (this is literally his code copied and pasted so)
+        // Thank you knah for teaching me this (this is literally his code copied and pasted so)
         public static MainThreadAwaitable YieldToMainThread()
         {
             return new MainThreadAwaitable();
