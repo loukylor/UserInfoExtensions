@@ -16,7 +16,7 @@ using VRC;
 using VRC.Core;
 using VRC.UI;
 
-[assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "2.2.0", "loukylor", "https://github.com/loukylor/UserInfoExtensions")]
+[assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "2.2.1", "loukylor", "https://github.com/loukylor/UserInfoExtensions")]
 [assembly: MelonGame("VRChat", "VRChat")]
 
 namespace UserInfoExtensions
@@ -284,7 +284,7 @@ namespace UserInfoExtensions
             UserInfoExtensionsMod.HideAllPopups();
 
             string location;
-            if (Utilities.ActiveUser.IsSelf)
+            if (!Utilities.ActiveUser.IsSelf)
             {
                 location = Utilities.ActiveUser.location;
             }
