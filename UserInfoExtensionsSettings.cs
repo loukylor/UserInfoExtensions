@@ -14,6 +14,7 @@ namespace UserInfoExtensions
         public static bool BioLinksButton;
         public static bool BioLanguagesButton;
         public static bool OpenUserInBrowserButton;
+        public static bool OpenUserWorldInWorldMenu;
 
         public static void RegisterSettings()
         {
@@ -26,6 +27,7 @@ namespace UserInfoExtensions
             MelonPreferences.CreateEntry(catagory, nameof(BioLinksButton), false, "Show \"Bio Links\" button");
             MelonPreferences.CreateEntry(catagory, nameof(BioLanguagesButton), false, "Show \"Bio Languages\" button");
             MelonPreferences.CreateEntry(catagory, nameof(OpenUserInBrowserButton), false, "Show \"Open User in Browser\" button");
+            MelonPreferences.CreateEntry(catagory, nameof(OpenUserWorldInWorldMenu), false, "Show\"Open User World in World Menu\" button");
 
             OnModSettingsApplied();
         }

@@ -16,7 +16,7 @@ using VRC;
 using VRC.Core;
 using VRC.UI;
 
-[assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "2.1.2", "loukylor", "https://github.com/loukylor/UserInfoExtensions")]
+[assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "2.2.0", "loukylor", "https://github.com/loukylor/UserInfoExtensions")]
 [assembly: MelonGame("VRChat", "VRChat")]
 
 namespace UserInfoExtensions
@@ -51,6 +51,7 @@ namespace UserInfoExtensions
 
             QuickMenuFromSocial.Init();
             GetAvatarAuthor.Init();
+            OpenInWorldMenu.Init();
             BioButtons.Init();
             OpenInBrowser.Init();
 
@@ -58,8 +59,9 @@ namespace UserInfoExtensions
         }
         public override void VRChat_OnUiManagerInit()
         {
-            GetAvatarAuthor.UiInit();
             Utilities.UiInit();
+            GetAvatarAuthor.UiInit();
+            OpenInWorldMenu.UiInit();
             BioButtons.UiInit();
             MelonLogger.Msg("UI Initialized!");
         }
@@ -83,10 +85,10 @@ namespace UserInfoExtensions
         }
         public static void HideAllPopups()
         {
+            Utilities.ClosePopup();
             BioButtons.bioLanguagesPopup.Close();
             BioButtons.bioLinksPopup.Close();
             menu.Hide();
-            Utilities.ClosePopup();
         }
         public static void OnUserInfoClose()
         {
@@ -145,7 +147,6 @@ namespace UserInfoExtensions
             if (UserInfoExtensionsSettings.AuthorFromSocialMenuButton) UserInfoExtensionsMod.userDetailsMenu.AddSimpleButton("Avatar Author", FromSocial);
             if (UserInfoExtensionsSettings.AuthorFromAvatarMenuButton) UIExpansionKit.API.ExpansionKitApi.GetExpandedMenu(UIExpansionKit.API.ExpandedMenu.AvatarMenu).AddSimpleButton("Avatar Author", FromAvatar);
             UserInfoExtensionsMod.menu.AddSimpleButton("Avatar Author", FromSocial);
-            UserInfoExtensionsMod.menu.AddSpacer();
         }
         public static void UiInit()
         {
@@ -260,6 +261,50 @@ namespace UserInfoExtensions
         {
             [JsonProperty("ownerId")]
             public string ownerId;
+        }
+    }
+    public class OpenInWorldMenu
+    {
+        public static PageWorldInfo worldInfo;
+        public static PageUserInfo userInfo;
+
+        public static void Init()
+        {
+            if (UserInfoExtensionsSettings.OpenUserWorldInWorldMenu) UserInfoExtensionsMod.userDetailsMenu.AddSimpleButton("Open User World in World Menu", OpenUserWorldInWorldMenu);
+            UserInfoExtensionsMod.menu.AddSimpleButton("Open User World in World Menu", OpenUserWorldInWorldMenu);
+        }
+        public static void UiInit()
+        {
+            worldInfo = GameObject.Find("UserInterface/MenuContent/Screens/WorldInfo").GetComponent<PageWorldInfo>();
+            userInfo = GameObject.Find("UserInterface/MenuContent/Screens/UserInfo").GetComponent<PageUserInfo>();
+        }
+
+        public static void OpenUserWorldInWorldMenu()
+        {
+            UserInfoExtensionsMod.HideAllPopups();
+
+            MelonLogger.Msg(Utilities.ActiveUser.location);
+            if (userInfo.field_Private_ApiWorld_1 != null && !(string.IsNullOrEmpty(Utilities.ActiveUser.location) || Utilities.ActiveUser.location == "private"))
+            {
+                string processedString = Utilities.ActiveUser.location.Split(new char[] { ':' }, 2)[1];
+                MelonLogger.Msg(processedString);
+                int count;
+                try
+                {
+                    count = userInfo.field_Private_ApiWorld_1.instances[processedString];
+                }
+                catch
+                {
+                    count = 0;
+                }
+                ApiWorldInstance instance = new ApiWorldInstance(userInfo.field_Private_ApiWorld_1, processedString, count);
+                worldInfo.Method_Public_Void_ApiWorld_ApiWorldInstance_Boolean_Boolean_0(userInfo.field_Private_ApiWorld_1, instance);
+                VRCUiManager.prop_VRCUiManager_0.ShowScreenButton("UserInterface/MenuContent/Screens/WorldInfo");
+            }
+            else
+            {
+                Utilities.OpenPopupV2("Notice", "Cannot grab this user's world", "Close", new Action(() => Utilities.ClosePopup()));
+            }
         }
     }
 

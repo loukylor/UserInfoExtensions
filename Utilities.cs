@@ -37,9 +37,21 @@ namespace UserInfoExtentions
             menuController = QuickMenu.prop_QuickMenu_0.field_Public_MenuController_0;
         }
 
-        public static void OpenPopupV2(string title, string text, string buttonText, Action onButtonClick) => popupV2.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, new object[5] { title, text, buttonText, (Il2CppSystem.Action)onButtonClick, null });
-        public static void OpenPopupV1(string title, string text, string buttonText, Action onButtonClick) => popupV1.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, new object[5] { title, text, buttonText, (Il2CppSystem.Action)onButtonClick, null });
-        public static void ClosePopup() => closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, new object[] { "POPUP" });
+        public static async void OpenPopupV2(string title, string text, string buttonText, Action onButtonClick)
+        {
+            await YieldToMainThread();
+            popupV2.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, new object[5] { title, text, buttonText, (Il2CppSystem.Action)onButtonClick, null });
+        }
+        public static async void OpenPopupV1(string title, string text, string buttonText, Action onButtonClick)
+        {
+            await YieldToMainThread();
+            popupV1.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, new object[5] { title, text, buttonText, (Il2CppSystem.Action)onButtonClick, null });
+        }
+        public static async void ClosePopup()
+        {
+            await YieldToMainThread();
+            closePopup.Invoke(VRCUiPopupManager.prop_VRCUiPopupManager_0, new object[] { "POPUP" });
+        }
 
         // This method is practically stolen from https://github.com/BenjaminZehowlt/DynamicBonesSafety/blob/master/DynamicBonesSafetyMod.cs
         public static bool CheckMethod(MethodBase methodBase, string match)
