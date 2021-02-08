@@ -283,21 +283,29 @@ namespace UserInfoExtensions
         {
             UserInfoExtensionsMod.HideAllPopups();
 
-            MelonLogger.Msg(Utilities.ActiveUser.location);
-            if (userInfo.field_Private_ApiWorld_1 != null && !(string.IsNullOrEmpty(Utilities.ActiveUser.location) || Utilities.ActiveUser.location == "private"))
+            string location;
+            if (Utilities.ActiveUser.IsSelf)
             {
-                string processedString = Utilities.ActiveUser.location.Split(new char[] { ':' }, 2)[1];
-                MelonLogger.Msg(processedString);
+                location = Utilities.ActiveUser.location;
+            }
+            else
+            {
+                location = APIUser.CurrentUser.location;
+            }
+            if (userInfo.field_Private_ApiWorld_1 != null && !(string.IsNullOrEmpty(location) || location == "private"))
+            {
+                string processedLocation  = Utilities.ActiveUser.location.Split(new char[] { ':' }, 2)[1];
+                MelonLogger.Msg(processedLocation);
                 int count;
                 try
                 {
-                    count = userInfo.field_Private_ApiWorld_1.instances[processedString];
+                    count = userInfo.field_Private_ApiWorld_1.instances[processedLocation];
                 }
                 catch
                 {
                     count = 0;
                 }
-                ApiWorldInstance instance = new ApiWorldInstance(userInfo.field_Private_ApiWorld_1, processedString, count);
+                ApiWorldInstance instance = new ApiWorldInstance(userInfo.field_Private_ApiWorld_1, processedLocation, count);
                 worldInfo.Method_Public_Void_ApiWorld_ApiWorldInstance_Boolean_Boolean_0(userInfo.field_Private_ApiWorld_1, instance);
                 VRCUiManager.prop_VRCUiManager_0.ShowScreenButton("UserInterface/MenuContent/Screens/WorldInfo");
             }
