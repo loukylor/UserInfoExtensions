@@ -16,7 +16,7 @@ using VRC;
 using VRC.Core;
 using VRC.UI;
 
-[assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "2.2.1", "loukylor", "https://github.com/loukylor/UserInfoExtensions")]
+[assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "2.2.3", "loukylor", "https://github.com/loukylor/UserInfoExtensions")]
 [assembly: MelonGame("VRChat", "VRChat")]
 
 namespace UserInfoExtensions
@@ -61,7 +61,6 @@ namespace UserInfoExtensions
         {
             Utilities.UiInit();
             GetAvatarAuthor.UiInit();
-            OpenInWorldMenu.UiInit();
             BioButtons.UiInit();
             MelonLogger.Msg("UI Initialized!");
         }
@@ -142,11 +141,16 @@ namespace UserInfoExtensions
         public static PageAvatar avatarPage;
         public static bool isFromSocialPage = false;
 
+        public static Type genericType;
+        public static PropertyInfo screenStackProp;
+
         public static void Init()
         {
             if (UserInfoExtensionsSettings.AuthorFromSocialMenuButton) UserInfoExtensionsMod.userDetailsMenu.AddSimpleButton("Avatar Author", FromSocial);
             if (UserInfoExtensionsSettings.AuthorFromAvatarMenuButton) UIExpansionKit.API.ExpansionKitApi.GetExpandedMenu(UIExpansionKit.API.ExpandedMenu.AvatarMenu).AddSimpleButton("Avatar Author", FromAvatar);
             UserInfoExtensionsMod.menu.AddSimpleButton("Avatar Author", FromSocial);
+
+            screenStackProp = typeof(VRCUiManager).GetProperties().Where(pi => pi.Name.Contains("field_Internal_List_1_") && !pi.Name.Contains("String")).First();
         }
         public static void UiInit()
         {
@@ -223,6 +227,7 @@ namespace UserInfoExtensions
 
             MelonCoroutines.Start(StartTimer());
 
+            isFromSocialPage = false;
             OpenUserInSocialMenu(avatarPage.field_Public_SimpleAvatarPedestal_0.field_Internal_ApiAvatar_0.authorId);
         }
 
@@ -247,13 +252,21 @@ namespace UserInfoExtensions
             if (isFromSocialPage && user.id == Utilities.ActiveUser.id)
             {
                 Utilities.OpenPopupV2("Notice:", "You are already viewing the avatar author", "Close", new Action(() => Utilities.ClosePopup()));
-                isFromSocialPage = false;
                 return;
             }
-            VRCUiManager.prop_VRCUiManager_0.Method_Public_Void_String_Boolean_0("UserInterface/MenuContent/Screens/UserInfo"); //Open UserInfo Menu
-            GameObject gameObject = GameObject.Find("UserInterface/MenuContent/Screens/UserInfo");
-            VRCUiPage vrcUiPage = gameObject.GetComponent<VRCUiPage>();
-            vrcUiPage.Cast<PageUserInfo>().Method_Public_Void_APIUser_PDM_0(user); //Setup UserInfo
+
+            QuickMenu.prop_QuickMenu_0.field_Private_APIUser_0 = user;
+            QuickMenu.prop_QuickMenu_0.Method_Public_Void_Int32_Boolean_0(4, false);
+            if (isFromSocialPage)
+            {
+                // For some reason when called from the Social Menu the screen stack adds the UserInfo page twice (making the user have to hit the back button twice to leave the page), so I'm just getting the screen stack using Reflection (as the name doesn't seem static) and removing the 2nd to last entry
+                var listObject = screenStackProp.GetValue(VRCUiManager.prop_VRCUiManager_0);
+                Type genericType = typeof(Il2CppSystem.Collections.Generic.List<>).MakeGenericType(new Type[] { typeof(VRCUiManager).GetNestedTypes().First() });
+                genericType.GetMethod("RemoveAt").Invoke(listObject, new object[] { (int)genericType.GetProperty("Count").GetValue(listObject) - 1 });
+
+                isFromSocialPage = false;
+            }
+
         }
 
 
@@ -265,18 +278,10 @@ namespace UserInfoExtensions
     }
     public class OpenInWorldMenu
     {
-        public static PageWorldInfo worldInfo;
-        public static PageUserInfo userInfo;
-
         public static void Init()
         {
             if (UserInfoExtensionsSettings.OpenUserWorldInWorldMenu) UserInfoExtensionsMod.userDetailsMenu.AddSimpleButton("Open User World in World Menu", OpenUserWorldInWorldMenu);
             UserInfoExtensionsMod.menu.AddSimpleButton("Open User World in World Menu", OpenUserWorldInWorldMenu);
-        }
-        public static void UiInit()
-        {
-            worldInfo = GameObject.Find("UserInterface/MenuContent/Screens/WorldInfo").GetComponent<PageWorldInfo>();
-            userInfo = GameObject.Find("UserInterface/MenuContent/Screens/UserInfo").GetComponent<PageUserInfo>();
         }
 
         public static void OpenUserWorldInWorldMenu()
@@ -292,21 +297,20 @@ namespace UserInfoExtensions
             {
                 location = APIUser.CurrentUser.location;
             }
-            if (userInfo.field_Private_ApiWorld_1 != null && !(string.IsNullOrEmpty(location) || location == "private"))
+            if (Utilities.userInfo.field_Private_ApiWorld_1 != null && !(string.IsNullOrEmpty(location) || location == "private"))
             {
                 string processedLocation  = Utilities.ActiveUser.location.Split(new char[] { ':' }, 2)[1];
-                MelonLogger.Msg(processedLocation);
                 int count;
                 try
                 {
-                    count = userInfo.field_Private_ApiWorld_1.instances[processedLocation];
+                    count = Utilities.userInfo.field_Private_ApiWorld_1.instances[processedLocation];
                 }
                 catch
                 {
                     count = 0;
                 }
-                ApiWorldInstance instance = new ApiWorldInstance(userInfo.field_Private_ApiWorld_1, processedLocation, count);
-                worldInfo.Method_Public_Void_ApiWorld_ApiWorldInstance_Boolean_Boolean_0(userInfo.field_Private_ApiWorld_1, instance);
+                ApiWorldInstance instance = new ApiWorldInstance(Utilities.userInfo.field_Private_ApiWorld_1, processedLocation, count);
+                Utilities.worldInfo.Method_Public_Void_ApiWorld_ApiWorldInstance_Boolean_Boolean_0(Utilities.userInfo.field_Private_ApiWorld_1, instance);
                 VRCUiManager.prop_VRCUiManager_0.ShowScreenButton("UserInterface/MenuContent/Screens/WorldInfo");
             }
             else

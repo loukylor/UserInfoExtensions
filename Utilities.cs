@@ -4,7 +4,9 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using UnityEngine;
 using VRC.Core;
+using VRC.UI;
 
 namespace UserInfoExtentions
 {
@@ -17,6 +19,9 @@ namespace UserInfoExtentions
         public static ConcurrentQueue<Action> ToMainThreadQueue = new ConcurrentQueue<Action>();
 
         public static MenuController menuController;
+
+        public static PageWorldInfo worldInfo;
+        public static PageUserInfo userInfo;
         public static APIUser ActiveUser
         {
             get { return menuController.activeUser; }
@@ -35,6 +40,8 @@ namespace UserInfoExtentions
         public static void UiInit()
         {
             menuController = QuickMenu.prop_QuickMenu_0.field_Public_MenuController_0;
+            worldInfo = GameObject.Find("UserInterface/MenuContent/Screens/WorldInfo").GetComponent<PageWorldInfo>();
+            userInfo = GameObject.Find("UserInterface/MenuContent/Screens/UserInfo").GetComponent<PageUserInfo>();
         }
 
         public static async void OpenPopupV2(string title, string text, string buttonText, Action onButtonClick)
