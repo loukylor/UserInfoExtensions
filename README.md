@@ -1,17 +1,26 @@
-Adds a "few" new buttons to the Social page to make VRChat more convenient
+# UserInfoExtensions
 
+A [MelonLoader](https://github.com/LavaGang/MelonLoader) mod which adds convenient buttons to the Social page making VRChat more convenient
 
-New features, a button that:
- - opens a user in the Quick Menu from the Social Menu page
- - gets the avatars author from the Social Menu page and also one for the avatar menu
- - opens a user's world in the world menu (if you join their world)
- - shows you the bio of the selected user (bio is different from status)
- - opens the links a the selected user has in their bio
- - show you the languages a the selected user has in their bio
- - opens the a the selected user in the default browser
- - opens the a the selected user's avatar in the default browser
- (These buttons can also be turned on and off and can always be accessed in a popup attached to the User Details Page)
+## Features
+Adding individually toggleable buttons that allow you to:
+ - Select a user in the Quick Menu from the Social Menu page.
+ - Find the avatar's author from the Social Menu and Avatar Menu pages.
+ - Selects the world instance of the selected user in the World Menu (if you join their world).
+ - Show the bio of the selected user (bio is different from status).
+ - Open the links the selected user has in their bio.
+ - Display the languages the selected user has in their bio.
+ - Open the selected user in the systems default browser.
+ - Open the selected users avatar in the systems default browser.
 
-Note: This needs UIExpansionKit (https://github.com/knah/VRCMods/tree/master/UIExpansionKit)
+The buttons can always be accessed in a popup attached to the User Details Page.
 
-Also, credits to Ben (https://github.com/BenjaminZehowlt) because I referenced his code a lot to impliment Xref Scanning
+## Requirements
+ - [UIExpansionKit](https://github.com/knah/VRCMods/tree/master/UIExpansionKit)
+
+## Installation
+ - Download the [latest release of the mod](https://github.com/loukylor/UserInfoExtensions/releases).
+ - Place the downloaded DLL in the VRChat/Mods folder.
+
+## Credits
+ - Ben(https://github.com/BenjaminZehowlt) because I referenced his code a lot to implement Xref Scanning
