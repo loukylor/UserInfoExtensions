@@ -16,7 +16,7 @@ using VRC;
 using VRC.Core;
 using VRC.UI;
 
-[assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "2.2.3", "loukylor", "https://github.com/loukylor/UserInfoExtensions")]
+[assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "2.2.4", "loukylor", "https://github.com/loukylor/UserInfoExtensions")]
 [assembly: MelonGame("VRChat", "VRChat")]
 
 namespace UserInfoExtensions
@@ -29,7 +29,7 @@ namespace UserInfoExtensions
         public override void OnApplicationStart()
         {
             UserInfoExtensionsSettings.RegisterSettings();
-            
+
             Utilities.Init();
 
             Harmony.Patch(AccessTools.Method(typeof(MenuController), "Method_Public_Void_APIUser_0"), postfix: new HarmonyMethod(typeof(UserInfoExtensionsMod).GetMethod("OnUserInfoOpen", BindingFlags.Static | BindingFlags.Public)));
@@ -63,10 +63,6 @@ namespace UserInfoExtensions
             GetAvatarAuthor.UiInit();
             BioButtons.UiInit();
             MelonLogger.Msg("UI Initialized!");
-        }
-        public static void print(MethodBase __originalMethod)
-        {
-            MelonLogger.Msg(__originalMethod.Name);
         }
         public override void OnPreferencesSaved()
         {
@@ -118,7 +114,7 @@ namespace UserInfoExtensions
         {
             UserInfoExtensionsMod.HideAllPopups();
 
-            foreach (Player player in PlayerManager.field_Private_Static_PlayerManager_0.field_Private_List_1_Player_0)
+            foreach (Player player in PlayerManager.prop_PlayerManager_0.field_Private_List_1_Player_0)
             {
                 if (player.field_Private_APIUser_0 == null) continue;
                 if (player.field_Private_APIUser_0.id == Utilities.ActiveUser.id)
@@ -278,10 +274,14 @@ namespace UserInfoExtensions
     }
     public class OpenInWorldMenu
     {
+        public static MethodInfo setUpWorldInfo;
         public static void Init()
         {
             if (UserInfoExtensionsSettings.OpenUserWorldInWorldMenu) UserInfoExtensionsMod.userDetailsMenu.AddSimpleButton("Open User World in World Menu", OpenUserWorldInWorldMenu);
             UserInfoExtensionsMod.menu.AddSimpleButton("Open User World in World Menu", OpenUserWorldInWorldMenu);
+
+            setUpWorldInfo = typeof(PageWorldInfo).GetMethods()
+                .Where(mb => mb.Name.StartsWith("Method_Public_Void_ApiWorld_ApiWorldInstance_Boolean_Boolean_") && !mb.Name.Contains("_PDM_") && Utilities.CheckMethod(mb, "NEW INSTANCE")).First();
         }
 
         public static void OpenUserWorldInWorldMenu()
@@ -310,7 +310,7 @@ namespace UserInfoExtensions
                     count = 0;
                 }
                 ApiWorldInstance instance = new ApiWorldInstance(Utilities.userInfo.field_Private_ApiWorld_1, processedLocation, count);
-                Utilities.worldInfo.Method_Public_Void_ApiWorld_ApiWorldInstance_Boolean_Boolean_0(Utilities.userInfo.field_Private_ApiWorld_1, instance);
+                setUpWorldInfo.Invoke(Utilities.worldInfo, new object[] { Utilities.userInfo.field_Private_ApiWorld_1, instance, null, null });
                 VRCUiManager.prop_VRCUiManager_0.ShowScreenButton("UserInterface/MenuContent/Screens/WorldInfo");
             }
             else
@@ -415,7 +415,7 @@ namespace UserInfoExtensions
 
                 bioLinksPopup.toggleGroup.RegisterToggle(toggle);
                 toggle.group = bioLinksPopup.toggleGroup;
-                toggle.onValueChanged.AddListener((UnityEngine.Events.UnityAction<bool>) new Action<bool>((state) =>
+                toggle.onValueChanged.AddListener(new Action<bool>((state) =>
                 {
                     if (!state)
                     {
