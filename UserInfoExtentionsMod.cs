@@ -16,7 +16,7 @@ using VRC;
 using VRC.Core;
 using VRC.UI;
 
-[assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "2.2.4", "loukylor", "https://github.com/loukylor/UserInfoExtensions")]
+[assembly: MelonInfo(typeof(UserInfoExtensions.UserInfoExtensionsMod), "UserInfoExtensions", "2.2.5", "loukylor", "https://github.com/loukylor/UserInfoExtensions")]
 [assembly: MelonGame("VRChat", "VRChat")]
 
 namespace UserInfoExtensions
@@ -49,19 +49,76 @@ namespace UserInfoExtensions
             menu.AddSimpleButton("Back", () => menu.Hide());
             userDetailsMenu.AddSimpleButton("UserInfoExtensions", () => { menu.Show(); Utilities.ClosePopup(); });
 
-            QuickMenuFromSocial.Init();
-            GetAvatarAuthor.Init();
-            OpenInWorldMenu.Init();
-            BioButtons.Init();
-            OpenInBrowser.Init();
+            // It works and its not that perf expensive 
+            try
+            {
+                QuickMenuFromSocial.Init();
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex.ToString());
+            }
+            try
+            {
+                GetAvatarAuthor.Init();
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex.ToString());
+            }
+            try
+            {
+                OpenInWorldMenu.Init();
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex.ToString());
+            }
+            try
+            {
+                BioButtons.Init();
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex.ToString());
+            }
+            try 
+            {
+                OpenInBrowser.Init();
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex.ToString());
+            }
 
             MelonLogger.Msg("Initialized!");
         }
         public override void VRChat_OnUiManagerInit()
         {
-            Utilities.UiInit();
-            GetAvatarAuthor.UiInit();
-            BioButtons.UiInit();
+            try
+            {
+                Utilities.UiInit();
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex.ToString());
+            }
+            try
+            {
+                GetAvatarAuthor.UiInit();
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex.ToString());
+            }
+            try
+            {
+                BioButtons.UiInit();
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex.ToString());
+            }
             MelonLogger.Msg("UI Initialized!");
         }
         public override void OnPreferencesSaved()
@@ -106,9 +163,9 @@ namespace UserInfoExtensions
             UserInfoExtensionsMod.menu.AddSimpleButton("To Quick Menu", ToQuickMenu);
 
             closeMenu = typeof(VRCUiManager).GetMethods()
-                            .Where(mb => mb.Name.StartsWith("Method_Public_Void_Boolean_Boolean_") && Utilities.CheckUsed(mb, "Method_Public_Virtual_Void_String_String_0")).First();
+                            .Where(mb => mb.Name.StartsWith("Method_Public_Void_Boolean_Boolean_") && !mb.Name.Contains("_PDM_") && mb.GetParameters().Where(pi => pi.HasDefaultValue && (bool)pi.DefaultValue == false).Count() == 2).First();
             openQuickMenu = typeof(QuickMenu).GetMethods()
-                            .Where(mb => mb.Name.StartsWith("Method_Public_Void_Boolean_") && mb.Name.Length <= 29 && !Utilities.CheckUsed(mb, "Method_Public_Void_EnumNPublicSealed") && !Utilities.CheckUsed(mb, "Method_Private_Void_Int32_")).First();
+                            .Where(mb => mb.Name.StartsWith("Method_Public_Void_Boolean_") && mb.Name.Length <= 29 && mb.GetParameters().Any(pi => pi.HasDefaultValue == false)).First();
         }
         public static void ToQuickMenu()
         {
