@@ -44,6 +44,18 @@ namespace UserInfoExtentions
             userInfo = GameObject.Find("UserInterface/MenuContent/Screens/UserInfo").GetComponent<PageUserInfo>();
         }
 
+        public static void TryExecuteMethod(MethodInfo method, object instance = null, object[] parameters = null)
+        {
+            try
+            {
+                method.Invoke(instance, parameters);
+            }
+            catch (Exception ex)
+            {
+                MelonLoader.MelonLogger.Error($"Error while trying to run method \"{method.Name}\" in module \"{method.DeclaringType}:\"\n" + ex.ToString());
+            }
+        }
+
         public static async void OpenPopupV2(string title, string text, string buttonText, Action onButtonClick)
         {
             await YieldToMainThread();

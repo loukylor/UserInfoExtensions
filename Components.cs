@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections;
 using System.IO;
 using System.Net;
-using System.Threading.Tasks;
-using MelonLoader;
 using UnhollowerBaseLib.Attributes;
 using UnityEngine;
-using UserInfoExtensions;
+using UserInfoExtentions.Modules;
 
 namespace UserInfoExtentions.Component
 {
