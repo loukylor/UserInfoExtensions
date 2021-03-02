@@ -1,3 +1,6 @@
+# Archive notice
+I've since combined all my mods into one [repository](https://github.com/loukylor/VRC-Mods). This repository only exists so people can still download this mod, and to see version history.
+
 # UserInfoExtensions
 
 A [MelonLoader](https://github.com/LavaGang/MelonLoader) mod which adds buttons to the to make VRChat more convenient
